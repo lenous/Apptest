@@ -1,0 +1,1496 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<title>Výroba – Preview v4</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+    min-height: 100vh;
+    padding: 20px;
+    color: #111;
+  }
+  .app-wrap {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .toolbar {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+    color: #fff;
+  }
+  .toolbar h1 { font-size: 22px; margin-bottom: 12px; }
+  .toolbar p { font-size: 13px; opacity: 0.8; margin-bottom: 12px; }
+  .role-picker, .screen-picker {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;
+  }
+  .role-btn, .screen-btn {
+    padding: 8px 14px; border-radius: 8px; border: none;
+    background: rgba(255,255,255,0.15); color: #fff;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .role-btn.active, .screen-btn.active {
+    background: #fff; color: #1a56db;
+  }
+  .role-btn:hover, .screen-btn:hover { background: rgba(255,255,255,0.3); }
+  .role-btn.active:hover, .screen-btn.active:hover { background: #fff; }
+
+  .phones-wrap {
+    display: flex; flex-wrap: wrap; gap: 24px; justify-content: center;
+  }
+  .phone {
+    width: 390px; height: 844px;
+    background: #000; border-radius: 48px; padding: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    flex-shrink: 0;
+  }
+  .phone-screen {
+    width: 100%; height: 100%;
+    background: #f3f4f6; border-radius: 36px;
+    overflow: hidden; position: relative;
+    display: flex; flex-direction: column;
+  }
+  .status-bar {
+    height: 44px; background: #1a56db; color: #fff;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 24px; font-size: 14px; font-weight: 600;
+  }
+  .status-bar .dots { display: flex; gap: 4px; }
+  .top-bar {
+    padding: 14px 20px; background: #1a56db; color: #fff;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .top-bar h2 { font-size: 17px; font-weight: 700; }
+  .top-bar .sub { font-size: 12px; opacity: 0.85; }
+  .top-bar .icon { font-size: 20px; cursor: pointer; }
+
+  .content { flex: 1; overflow-y: auto; background: #f3f4f6; }
+  .dark .content { background: #0f172a; color: #e5e7eb; }
+  .dark .card { background: #1e293b; color: #e5e7eb; }
+  .dark .sub-text { color: #94a3b8; }
+
+  .scroll { padding: 14px; }
+
+  /* Cards */
+  .card {
+    background: #fff; border-radius: 12px; padding: 14px;
+    margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .card.has-left { border-left-width: 3px; border-left-style: solid; }
+  .card-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .order-no { font-size: 15px; font-weight: 700; }
+  .sub-text { font-size: 12px; color: #6b7280; }
+  .name { font-size: 13px; color: #374151; margin-top: 2px; }
+
+  /* Badges */
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 6px;
+    font-size: 11px; font-weight: 600;
+  }
+  .badge-blue  { background: #dbeafe; color: #1d4ed8; }
+  .badge-red   { background: #fee2e2; color: #b91c1c; }
+  .badge-green { background: #dcfce7; color: #15803d; }
+  .badge-orange { background: #fef3c7; color: #b45309; }
+  .badge-gray  { background: #f3f4f6; color: #6b7280; }
+
+  /* Tabs (bottom) */
+  .tabs-bottom {
+    display: flex; justify-content: space-around;
+    background: #fff; border-top: 1px solid #e5e7eb; padding: 6px 0;
+  }
+  .dark .tabs-bottom { background: #1e293b; border-top-color: #334155; }
+  .tab-bottom {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    color: #6b7280; font-size: 10px; padding: 4px 8px;
+  }
+  .tab-bottom.active { color: #1a56db; font-weight: 700; }
+  .dark .tab-bottom.active { color: #60a5fa; }
+  .tab-bottom .ic { font-size: 20px; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 14px; border-radius: 10px;
+    font-size: 14px; font-weight: 600; border: none; cursor: pointer;
+  }
+  .btn-primary { background: #1a56db; color: #fff; }
+  .btn-ok { background: #15803d; color: #fff; }
+  .btn-outline { background: #fff; color: #1a56db; border: 1.5px solid #1a56db; }
+  .btn-danger { background: #b91c1c; color: #fff; }
+  .btn-block { display: flex; width: 100%; justify-content: center; }
+
+  /* Progress */
+  .progress { height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; margin: 6px 0; }
+  .progress-fill { height: 100%; background: #1a56db; border-radius: 3px; }
+  .progress-ok { background: #15803d; }
+
+  /* Station timeline */
+  .st-row { display: flex; gap: 10px; margin-bottom: 8px; }
+  .st-dot {
+    width: 12px; height: 12px; border-radius: 6px; margin-top: 14px;
+  }
+  .st-line { width: 2px; background: #e5e7eb; flex: 1; margin-top: 2px; }
+  .st-col { width: 24px; display: flex; flex-direction: column; align-items: center; }
+  .st-card {
+    flex: 1; background: #fff; border-radius: 10px; padding: 10px;
+    border-left: 3px solid #6b7280;
+  }
+  .st-card.disabled { opacity: 0.4; }
+  .st-card.active { border-left-color: #1d4ed8; }
+  .st-card.done   { border-left-color: #15803d; }
+  .st-card.issue  { border-left-color: #b91c1c; }
+
+  /* Qty box */
+  .qty-row { display: flex; gap: 6px; margin-top: 8px; }
+  .qty-item { flex: 1; text-align: center; padding: 6px; background: #f9fafb; border-radius: 6px; }
+  .qty-item b { display: block; font-size: 16px; font-weight: 700; }
+  .qty-item .lbl { font-size: 10px; color: #6b7280; text-transform: uppercase; margin-top: 2px; }
+
+  /* Filters */
+  .filter-row { display: flex; gap: 6px; margin-bottom: 10px; }
+  .filter-chip {
+    padding: 6px 12px; border-radius: 16px; font-size: 12px;
+    background: #fff; border: 1px solid #e5e7eb; color: #374151; cursor: pointer;
+  }
+  .filter-chip.active { background: #1a56db; color: #fff; border-color: #1a56db; }
+
+  /* Stats */
+  .stats { display: flex; gap: 8px; margin-bottom: 10px; }
+  .stat-box { flex: 1; background: #fff; border-radius: 10px; padding: 10px; text-align: center; }
+  .stat-box b { font-size: 20px; font-weight: 800; }
+  .stat-box .lbl { font-size: 11px; color: #6b7280; }
+
+  /* Face ID */
+  .faceid-wrap {
+    flex: 1; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; gap: 24px;
+    background: #0f172a; color: #fff;
+  }
+  .face-circle {
+    width: 140px; height: 140px; border-radius: 70px;
+    border: 3px solid #60a5fa; display: flex; align-items: center; justify-content: center;
+    font-size: 80px;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(96,165,250,0.6); }
+    50% { box-shadow: 0 0 0 20px rgba(96,165,250,0); }
+  }
+
+  /* Transfer popup */
+  .modal-bg {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.5);
+    display: flex; align-items: flex-end; justify-content: center;
+    border-radius: 36px; overflow: hidden;
+  }
+  .modal {
+    width: 100%; background: #fff; border-radius: 20px 20px 0 0;
+    padding: 20px; padding-bottom: 30px;
+  }
+  .modal h3 { font-size: 17px; margin-bottom: 4px; }
+  .modal p { font-size: 13px; color: #6b7280; margin-bottom: 14px; }
+  .qty-picker { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 14px; }
+  .qty-picker .num {
+    font-size: 32px; font-weight: 800; min-width: 100px; text-align: center;
+  }
+  .qty-picker button {
+    width: 40px; height: 40px; border-radius: 20px; border: none;
+    background: #f3f4f6; font-size: 22px; cursor: pointer;
+  }
+  .qty-slider { width: 100%; margin: 10px 0; }
+  .target-chip {
+    display: inline-block; padding: 6px 10px; border-radius: 8px;
+    background: #dbeafe; color: #1d4ed8; font-size: 13px; font-weight: 600; margin-bottom: 14px;
+  }
+
+  .screen { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+  .screen.active { display: flex; }
+
+  .section-title {
+    font-size: 11px; font-weight: 700; color: #6b7280;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    margin: 14px 0 6px;
+  }
+
+  .info-box {
+    background: #fef3c7; color: #92400e; padding: 10px;
+    border-radius: 8px; font-size: 12px; margin-bottom: 10px;
+    display: flex; gap: 6px; align-items: flex-start;
+  }
+  .info-box.ok { background: #dcfce7; color: #166534; }
+  .info-box.info { background: #dbeafe; color: #1d4ed8; }
+
+  .kpi-tile {
+    background: #fff; border-radius: 12px; padding: 14px;
+    margin-bottom: 10px;
+  }
+  .kpi-big { font-size: 28px; font-weight: 800; color: #1a56db; }
+  .kpi-label { font-size: 12px; color: #6b7280; }
+
+  .bar-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+  .bar-label { width: 60px; font-size: 12px; }
+  .bar-bg { flex: 1; height: 8px; background: #e5e7eb; border-radius: 4px; }
+  .bar-fill { height: 100%; border-radius: 4px; }
+
+  ul.plain { list-style: none; padding: 0; }
+  ul.plain li { padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+
+  input[type="text"], input[type="number"], input[type="date"] {
+    width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 14px; background: #f9fafb;
+  }
+  .form-row { margin-bottom: 10px; }
+  .form-row label { display: block; font-size: 12px; color: #374151; margin-bottom: 4px; font-weight: 500; }
+
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    padding: 6px 12px; border-radius: 16px; border: 1px solid #d1d5db;
+    background: #fff; font-size: 12px; cursor: pointer; color: #374151;
+  }
+  .chip.selected { background: #1a56db; color: #fff; border-color: #1a56db; }
+
+  .station-picker-row {
+    display: flex; gap: 6px; overflow-x: auto;
+    padding: 10px 14px; background: #fff; border-bottom: 1px solid #e5e7eb;
+  }
+  .dark .station-picker-row { background: #1e293b; border-bottom-color: #334155; }
+  .station-picker-row .chip { white-space: nowrap; }
+
+  .tab-nav { display: flex; background: #fff; border-bottom: 1px solid #e5e7eb; }
+  .dark .tab-nav { background: #1e293b; border-bottom-color: #334155; }
+  .tab-nav .tab {
+    flex: 1; text-align: center; padding: 12px 0;
+    font-size: 13px; color: #6b7280; cursor: pointer;
+  }
+  .tab-nav .tab.active {
+    color: #1a56db; font-weight: 700; border-bottom: 2px solid #1a56db;
+  }
+
+  .caption {
+    font-size: 13px; color: #fff; opacity: 0.85;
+    margin-bottom: 8px; font-weight: 600;
+  }
+
+  .phone-caption {
+    text-align: center; color: #fff; opacity: 0.7;
+    font-size: 12px; margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="app-wrap">
+
+  <div class="toolbar">
+    <h1>📱 Výroba – Preview v4</h1>
+    <p>Nová verze po debatě: 5 rolí, dílčí toky mezi stanovišti, kvalifikace, Face ID. Klikej na role – ukazují se příslušné obrazovky.</p>
+
+    <div class="caption">👤 Role</div>
+    <div class="role-picker">
+      <button class="role-btn active" data-role="operator">👷 Operátor</button>
+      <button class="role-btn" data-role="tpv">📐 TPV</button>
+      <button class="role-btn" data-role="dispatcher">📋 Dispečer</button>
+      <button class="role-btn" data-role="management">📊 Vedení</button>
+      <button class="role-btn" data-role="admin">⚙️ Admin</button>
+    </div>
+
+    <div class="caption" style="margin-top:14px">📺 Obrazovky dané role</div>
+    <div class="screen-picker" id="screens-for-role"></div>
+  </div>
+
+  <div class="phones-wrap" id="phones"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DEFINICE OBRAZOVEK PER ROLE
+// ═══════════════════════════════════════════════════════════════
+
+const SCREENS = {
+  // ─── OPERÁTOR ──────────────────────────────────────────────
+  operator: [
+    { id: 'faceid',       label: '🔒 Face ID' },
+    { id: 'op-queue',     label: '🏭 Mé stanoviště (AOI)' },
+    { id: 'op-qualifs',   label: '✔️ Kvalifikace → fronta' },
+    { id: 'op-station',   label: '⚙️ Stanoviště + počty' },
+    { id: 'op-transfer',  label: '▶️ Předat dalších X ks' },
+    { id: 'op-rework',    label: '🔧 Oprava po AOI' },
+    { id: 'op-notif',     label: '🔔 Notifikace' },
+  ],
+  tpv: [
+    { id: 'tpv-products', label: '📦 Produkty' },
+    { id: 'tpv-lib',      label: '📚 Knihovna dokumentů' },
+    { id: 'tpv-stations', label: '🏭 Použitá stanoviště' },
+  ],
+  dispatcher: [
+    { id: 'disp-dash',    label: '📊 Přehled' },
+    { id: 'disp-order',   label: '📋 Detail zakázky – toky' },
+    { id: 'disp-new',     label: '➕ Nová zakázka' },
+    { id: 'disp-timeline',label: '📈 Timeline dílčích toků' },
+  ],
+  management: [
+    { id: 'mgmt-kpi',     label: '📈 KPI dashboard' },
+    { id: 'mgmt-pdf',     label: '📄 PDF export' },
+    { id: 'mgmt-dark',    label: '🌙 Dark mode' },
+  ],
+  admin: [
+    { id: 'adm-users',    label: '👥 Uživatelé + kvalifikace' },
+    { id: 'adm-audit',    label: '📜 Audit log' },
+    { id: 'adm-delete',   label: '🗑️ Hard-delete' },
+  ],
+};
+
+// ═══════════════════════════════════════════════════════════════
+// SHARED SNIPPETS
+// ═══════════════════════════════════════════════════════════════
+
+function statusBar() {
+  return `<div class="status-bar"><span>9:41</span><span class="dots">●●●</span><span>100%</span></div>`;
+}
+
+function topBar(title, sub = '', right = '') {
+  return `<div class="top-bar">
+    <div><h2>${title}</h2>${sub ? `<div class="sub">${sub}</div>` : ''}</div>
+    ${right}
+  </div>`;
+}
+
+function bottomTabsOperator(active) {
+  return tabsBottom([
+    ['queue','🏭','Mé st.'],
+    ['orders','📋','Zakázky'],
+    ['notif','🔔','Notif.'],
+    ['profile','👤','Profil'],
+  ], active);
+}
+
+function bottomTabsDispatcher(active) {
+  return tabsBottom([
+    ['dash','📊','Přehled'],
+    ['queue','🏭','Mé st.'],
+    ['orders','📋','Zakázky'],
+    ['notif','🔔','Notif.'],
+    ['profile','👤','Profil'],
+  ], active);
+}
+
+function bottomTabsTpv(active) {
+  return tabsBottom([
+    ['prod','📦','Produkty'],
+    ['orders','📋','Zakázky'],
+    ['docs','📚','Dokumenty'],
+    ['notif','🔔','Notif.'],
+    ['profile','👤','Profil'],
+  ], active);
+}
+
+function bottomTabsMgmt(active) {
+  return tabsBottom([
+    ['kpi','📈','KPI'],
+    ['orders','📋','Zakázky'],
+    ['reports','📄','Reporty'],
+    ['profile','👤','Profil'],
+  ], active);
+}
+
+function bottomTabsAdmin(active) {
+  return tabsBottom([
+    ['kpi','📈','KPI'],
+    ['orders','📋','Zakázky'],
+    ['admin','⚙️','Správa'],
+    ['audit','📜','Audit'],
+    ['profile','👤','Profil'],
+  ], active);
+}
+
+function tabsBottom(items, active) {
+  return `<div class="tabs-bottom">${items.map(([id, ic, lbl]) =>
+    `<div class="tab-bottom ${id === active ? 'active' : ''}"><span class="ic">${ic}</span><span>${lbl}</span></div>`
+  ).join('')}</div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OBRAZOVKY
+// ═══════════════════════════════════════════════════════════════
+
+const RENDER = {
+
+// ─── FACE ID LOGIN ───────────────────────────────────────────
+faceid: () => ({
+  title: 'Face ID odemčení',
+  html: `
+    ${statusBar()}
+    <div class="faceid-wrap">
+      <div style="text-align:center">
+        <div style="font-size:36px; font-weight:800;">VÝROBA</div>
+        <div style="opacity:0.7; margin-top:4px;">Přihlášen: jan.novak@firma.cz</div>
+      </div>
+      <div class="face-circle">👁️</div>
+      <div style="text-align:center">
+        <div style="font-size:15px; margin-bottom:8px;">Podívej se na iPhone</div>
+        <div style="opacity:0.6; font-size:12px;">nebo použij heslo</div>
+      </div>
+      <button class="btn btn-outline" style="color:#fff; border-color:#60a5fa;">Přihlásit heslem</button>
+    </div>
+  `
+}),
+
+// ─── OP: Fronta na stanovišti AOI ───────────────────────────
+'op-queue': () => ({
+  title: 'Mé stanoviště: AOI',
+  html: `
+    ${statusBar()}
+    ${topBar('AOI kontrola', 'Jan Novák · operátor')}
+    <div class="content">
+      <div class="scroll">
+        <div class="stats">
+          <div class="stat-box"><b style="color:#6b7280">3</b><div class="lbl">Fronta</div></div>
+          <div class="stat-box"><b style="color:#1d4ed8">1</b><div class="lbl">Probíhá</div></div>
+          <div class="stat-box"><b style="color:#b91c1c">0</b><div class="lbl">Problém</div></div>
+        </div>
+
+        <div class="section-title">Aktivní zakázky</div>
+
+        <div class="card has-left" style="border-left-color:#1d4ed8">
+          <div class="card-row">
+            <span class="order-no">#260321</span>
+            <span class="badge badge-blue">Probíhá</span>
+          </div>
+          <div class="name">Siemens · PCB-A-007 · Řídicí deska</div>
+          <div class="qty-row">
+            <div class="qty-item"><b style="color:#1d4ed8">800</b><div class="lbl">Přišlo</div></div>
+            <div class="qty-item"><b style="color:#15803d">200</b><div class="lbl">Hotovo</div></div>
+            <div class="qty-item"><b>600</b><div class="lbl">Rozpracováno</div></div>
+          </div>
+          <div class="sub-text" style="margin-top:6px;">⬇ Z automatu ještě přijde <b>200 ks</b></div>
+        </div>
+
+        <div class="card has-left" style="border-left-color:#6b7280">
+          <div class="card-row">
+            <span class="order-no">#260318</span>
+            <span class="badge badge-gray">Čeká</span>
+          </div>
+          <div class="name">Bosch · MB-012 · Napájecí zdroj</div>
+          <div class="qty-row">
+            <div class="qty-item"><b>100</b><div class="lbl">Přišlo</div></div>
+            <div class="qty-item"><b>0</b><div class="lbl">Hotovo</div></div>
+            <div class="qty-item"><b>100</b><div class="lbl">Čeká</div></div>
+          </div>
+          <div class="sub-text" style="margin-top:6px;">⬇ Ještě přijde <b>400 ks</b></div>
+        </div>
+
+        <div class="card has-left" style="border-left-color:#6b7280">
+          <div class="card-row">
+            <span class="order-no">#260315</span>
+            <span class="badge badge-gray">Čeká</span>
+          </div>
+          <div class="name">ABB · RB-004 · Snímač</div>
+          <div class="qty-row">
+            <div class="qty-item"><b>50</b><div class="lbl">Přišlo</div></div>
+            <div class="qty-item"><b>0</b><div class="lbl">Hotovo</div></div>
+            <div class="qty-item"><b>50</b><div class="lbl">Čeká</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    ${bottomTabsOperator('queue')}
+  `
+}),
+
+// ─── OP: Kvalifikace filtrují přepínač ─────────────────────
+'op-qualifs': () => ({
+  title: 'Kvalifikace filtrují stanoviště',
+  html: `
+    ${statusBar()}
+    ${topBar('AOI kontrola', 'Jan Novák · operátor')}
+    <div class="station-picker-row">
+      <span class="chip">AOI ✓</span>
+      <span class="chip selected">AOI kontrola</span>
+      <span class="chip">Oprava po AOI</span>
+      <span class="chip">Výstupní kontrola</span>
+    </div>
+    <div class="content">
+      <div class="scroll">
+        <div class="info-box ok">✅ Vidíš jen stanoviště, na která máš kvalifikaci (3 z 12). Admin přidá další přes „Správa uživatelů".</div>
+
+        <div class="section-title">Moje kvalifikace</div>
+        <div class="card">
+          <ul class="plain">
+            <li>✅ aoi – AOI kontrola</li>
+            <li>✅ oprava_aoi – Oprava po AOI</li>
+            <li>✅ vystupni_kontrola – Výstupní kontrola</li>
+            <li style="opacity:0.4">✗ pajeni_vlna – Pájení vlnou</li>
+            <li style="opacity:0.4">✗ baleni – Balení</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    ${bottomTabsOperator('queue')}
+  `
+}),
+
+// ─── OP: Stanoviště – zápis počtu ──────────────────────────
+'op-station': () => ({
+  title: 'Stanoviště – zápis počtu',
+  html: `
+    ${statusBar()}
+    ${topBar('#260321 · AOI', 'Siemens · PCB-A-007')}
+    <div class="content">
+      <div class="scroll">
+
+        <div class="card has-left" style="border-left-color:#1d4ed8">
+          <div class="card-row">
+            <b>Aktuální stav</b>
+            <span class="badge badge-blue">Probíhá</span>
+          </div>
+          <div class="sub-text" style="margin-top:6px;">Zahájeno: 23.4.2026 09:14</div>
+        </div>
+
+        <div class="section-title">Celkové množství zakázky: 1 000 ks</div>
+        <div class="progress"><div class="progress-fill progress-ok" style="width:20%"></div></div>
+        <div style="display:flex; justify-content:space-between; font-size:11px; color:#6b7280;">
+          <span>Hotovo 200</span><span>Rozpracováno 600</span><span>Čeká 200</span>
+        </div>
+
+        <div class="section-title">Zapsat kusy (+)</div>
+        <div class="qty-row">
+          <div class="qty-item" style="border:1.5px solid #15803d66;">
+            <div style="color:#15803d; font-size:10px; font-weight:700;">OK</div>
+            <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+              <button class="btn" style="padding:4px 10px; background:#f3f4f6">−</button>
+              <b style="color:#15803d">5</b>
+              <button class="btn" style="padding:4px 10px; background:#f3f4f6">+</button>
+            </div>
+          </div>
+          <div class="qty-item" style="border:1.5px solid #d9770666;">
+            <div style="color:#d97706; font-size:10px; font-weight:700;">OPRAVA</div>
+            <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+              <button class="btn" style="padding:4px 10px; background:#f3f4f6">−</button>
+              <b style="color:#d97706">1</b>
+              <button class="btn" style="padding:4px 10px; background:#f3f4f6">+</button>
+            </div>
+          </div>
+          <div class="qty-item" style="border:1.5px solid #b91c1c66;">
+            <div style="color:#b91c1c; font-size:10px; font-weight:700;">ZMETEK</div>
+            <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+              <button class="btn" style="padding:4px 10px; background:#f3f4f6">−</button>
+              <b style="color:#b91c1c">0</b>
+              <button class="btn" style="padding:4px 10px; background:#f3f4f6">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <button class="btn btn-outline btn-block">💾 Uložit</button>
+          <button class="btn btn-primary btn-block">▶️ Předat dál</button>
+        </div>
+
+        <div class="info-box info" style="margin-top:12px;">ℹ️ Při „Předat dál" zvolíš, kolik ks jde na další stanoviště (Oprava po AOI).</div>
+
+        <div class="section-title">Poznámky</div>
+        <div class="card" style="padding:10px;">
+          <input type="text" placeholder="Přidat poznámku…" style="border:none; background:transparent; padding:4px 0;"/>
+        </div>
+      </div>
+    </div>
+    ${bottomTabsOperator('queue')}
+  `
+}),
+
+// ─── OP: Modal „Předat dál" ────────────────────────────────
+'op-transfer': () => ({
+  title: 'Modal: Předat dalších X ks',
+  html: `
+    ${statusBar()}
+    ${topBar('#260321 · AOI', 'Siemens · PCB-A-007')}
+    <div class="content">
+      <div class="scroll" style="opacity:0.6;">
+        <div class="card has-left" style="border-left-color:#1d4ed8">
+          <div class="card-row"><b>Stav</b><span class="badge badge-blue">Probíhá</span></div>
+          <div class="sub-text">Hotovo 200/1000, rozpracováno 600</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-bg">
+      <div class="modal">
+        <h3>Předat dál</h3>
+        <p>Kolik ks pošleš na další stanoviště?</p>
+
+        <div class="target-chip">→ Oprava po AOI (stanoviště 5)</div>
+
+        <div class="qty-picker">
+          <button>−</button>
+          <div class="num">200</div>
+          <button>+</button>
+        </div>
+        <input type="range" class="qty-slider" min="1" max="600" value="200">
+        <div style="display:flex; justify-content:space-between; font-size:11px; color:#6b7280; margin-bottom:14px;">
+          <span>1 ks</span><span>max 600 ks</span>
+        </div>
+
+        <div class="info-box ok">✅ Předá se 200 ks. Na AOI zůstane 400 rozpracovaných. Operátor Opravy dostane notifikaci.</div>
+
+        <div style="display:flex; gap:8px; margin-top:14px;">
+          <button class="btn btn-outline btn-block">Zrušit</button>
+          <button class="btn btn-primary btn-block">▶️ Předat 200 ks</button>
+        </div>
+      </div>
+    </div>
+  `
+}),
+
+// ─── OP: Oprava po AOI ─────────────────────────────────────
+'op-rework': () => ({
+  title: 'Stanoviště Oprava po AOI',
+  html: `
+    ${statusBar()}
+    ${topBar('#260321 · Oprava po AOI', 'Siemens · PCB-A-007')}
+    <div class="content">
+      <div class="scroll">
+
+        <div class="info-box">⚠️ Z AOI přišly kusy k opravě + kontrole. Desky se <b>nevracejí zpět</b> na AOI – oprava proběhne zde a pokračují dál.</div>
+
+        <div class="card has-left" style="border-left-color:#d97706">
+          <div class="card-row">
+            <b>Aktuální stav</b>
+            <span class="badge badge-orange">Čeká k opravě</span>
+          </div>
+        </div>
+
+        <div class="section-title">K opravě (z AOI)</div>
+        <div class="qty-row">
+          <div class="qty-item"><b style="color:#d97706">5</b><div class="lbl">Přišlo</div></div>
+          <div class="qty-item"><b style="color:#15803d">0</b><div class="lbl">Opraveno</div></div>
+          <div class="qty-item"><b style="color:#b91c1c">0</b><div class="lbl">Zmetek</div></div>
+        </div>
+
+        <div class="section-title">Checklist kontroly</div>
+        <div class="card">
+          <ul class="plain">
+            <li><input type="checkbox"> Optická kontrola spojů</li>
+            <li><input type="checkbox"> Doměření multimetrem</li>
+            <li><input type="checkbox"> Vizuální po opravě</li>
+            <li><input type="checkbox"> Fotka před/po opravě</li>
+          </ul>
+        </div>
+
+        <button class="btn btn-primary btn-block" style="margin-top:12px;">▶️ Předat dál (→ Osazování)</button>
+
+      </div>
+    </div>
+    ${bottomTabsOperator('queue')}
+  `
+}),
+
+// ─── OP: Notifikace ────────────────────────────────────────
+'op-notif': () => ({
+  title: 'Notifikace (mazání, priorita, filtr)',
+  html: `
+    ${statusBar()}
+    ${topBar('Notifikace', '3 nepřečtené')}
+    <div class="content">
+      <div class="scroll">
+        <div class="filter-row">
+          <span class="filter-chip">Vše (12)</span>
+          <span class="filter-chip active">Nepřečtené (3)</span>
+          <span class="filter-chip">Důležité</span>
+        </div>
+        <div style="display:flex; gap:12px; font-size:12px; color:#1a56db; margin-bottom:10px;">
+          <span>✔️ Označit vše přečtené</span>
+          <span style="color:#b91c1c">🗑️ Smazat přečtené</span>
+        </div>
+
+        <div class="card has-left" style="border-left-color:#b91c1c; background:#fef2f2;">
+          <div class="card-row">
+            <div style="display:flex; gap:6px; align-items:center;"><span style="font-size:18px;">🚨</span><b>Problém na Výstupní kontrole</b></div>
+            <span class="badge badge-red">Důležité</span>
+          </div>
+          <div class="sub-text">#260321 · Nalezena chyba v pájení</div>
+          <div class="sub-text" style="margin-top:4px;">před 5 min · Problém</div>
+        </div>
+
+        <div class="card has-left" style="border-left-color:#d97706; background:#fffbeb;">
+          <div class="card-row">
+            <div style="display:flex; gap:6px; align-items:center;"><span style="font-size:18px;">⏰</span><b>Termín do 2 dnů</b></div>
+            <span class="badge badge-orange">Běžná</span>
+          </div>
+          <div class="sub-text">#260318 · Bosch · MB-012</div>
+          <div class="sub-text">před 1 hod · Termín</div>
+        </div>
+
+        <div class="card has-left" style="border-left-color:#1d4ed8;">
+          <div class="card-row">
+            <div style="display:flex; gap:6px; align-items:center;"><span style="font-size:18px;">▶️</span><b>Přišly kusy z AOI</b></div>
+            <span class="badge badge-blue">Běžná</span>
+          </div>
+          <div class="sub-text">#260321 · 200 ks k opravě</div>
+          <div class="sub-text">před 3 hod · Změna</div>
+        </div>
+
+        <div class="info-box info" style="margin-top:10px;">ℹ️ Dlouhý stisk notifikace → změnit prioritu. X vpravo → smazat.</div>
+      </div>
+    </div>
+    ${bottomTabsOperator('notif')}
+  `
+}),
+
+// ─── TPV: Produkty ─────────────────────────────────────────
+'tpv-products': () => ({
+  title: 'TPV – Produkty',
+  html: `
+    ${statusBar()}
+    ${topBar('Produkty', 'TPV · Petr Dvořák')}
+    <div class="content">
+      <div class="scroll">
+        <input type="text" placeholder="🔍 Hledat produkt nebo zákazníka…" style="margin-bottom:10px;">
+
+        <div class="card">
+          <div class="card-row"><b>Siemens</b><span class="badge badge-blue">12 produktů</span></div>
+          <div style="margin-top:8px;">
+            <div style="padding:8px 0; border-bottom:1px solid #f3f4f6; display:flex; justify-content:space-between;">
+              <div><b>PCB-A-007</b><div class="sub-text">Řídicí deska, rev B</div></div>
+              <div class="sub-text">3 dokumenty</div>
+            </div>
+            <div style="padding:8px 0; border-bottom:1px solid #f3f4f6; display:flex; justify-content:space-between;">
+              <div><b>PCB-A-008</b><div class="sub-text">Ovladač, rev A</div></div>
+              <div class="sub-text">2 dokumenty</div>
+            </div>
+            <div style="padding:8px 0; display:flex; justify-content:space-between;">
+              <div><b>PCB-A-009</b><div class="sub-text">Zesilovač</div></div>
+              <div class="sub-text">⚠️ 0 dokumentů</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-row"><b>Bosch</b><span class="badge badge-blue">5 produktů</span></div>
+        </div>
+
+        <div class="card">
+          <div class="card-row"><b>ABB</b><span class="badge badge-blue">3 produkty</span></div>
+        </div>
+      </div>
+    </div>
+    ${bottomTabsTpv('prod')}
+  `
+}),
+
+// ─── TPV: Knihovna dokumentů ──────────────────────────────
+'tpv-lib': () => ({
+  title: 'TPV – Knihovna produktu',
+  html: `
+    ${statusBar()}
+    ${topBar('PCB-A-007', 'Siemens · Řídicí deska')}
+    <div class="content">
+      <div class="scroll">
+        <div class="info-box ok">✅ Dokumenty v knihovně se automaticky zkopírují u „Opakované" zakázky.</div>
+
+        <div class="section-title">Dokumenty (3)</div>
+
+        <div class="card">
+          <div style="display:flex; gap:10px; align-items:center;">
+            <div style="width:40px; height:40px; background:#dbeafe; border-radius:8px; display:flex; align-items:center; justify-content:center;">📊</div>
+            <div style="flex:1;">
+              <b>BOM_PCB-A-007_v3.xlsx</b>
+              <div class="sub-text">BOM · 142 KB · v3 · 15.4.2026</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="display:flex; gap:10px; align-items:center;">
+            <div style="width:40px; height:40px; background:#dbeafe; border-radius:8px; display:flex; align-items:center; justify-content:center;">📐</div>
+            <div style="flex:1;">
+              <b>Vykres_PCB-A-007.pdf</b>
+              <div class="sub-text">Výkres · 890 KB · v2 · 10.3.2026</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="display:flex; gap:10px; align-items:center;">
+            <div style="width:40px; height:40px; background:#dbeafe; border-radius:8px; display:flex; align-items:center; justify-content:center;">📋</div>
+            <div style="flex:1;">
+              <b>Pruvodni_list.pdf</b>
+              <div class="sub-text">Průvodní list · 220 KB · v1 · 2.2.2026</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-block" style="margin-top:12px;">⬆️ Nahrát dokument</button>
+      </div>
+    </div>
+    ${bottomTabsTpv('prod')}
+  `
+}),
+
+// ─── TPV: Použitá stanoviště ──────────────────────────────
+'tpv-stations': () => ({
+  title: 'TPV – Použitá stanoviště produktu',
+  html: `
+    ${statusBar()}
+    ${topBar('PCB-A-007 · Stanoviště', 'Siemens')}
+    <div class="content">
+      <div class="scroll">
+        <div class="info-box">✏️ Vyber, kterými stanovišti tento produkt prochází. Nová zakázka pro tento produkt se automaticky nastaví podle této šablony.</div>
+
+        <div class="card">
+          ${[
+            ['1','Sklad',true],
+            ['2','Automaty',true],
+            ['3','AOI kontrola',true],
+            ['4','RTG',false],
+            ['5','Oprava po AOI',true],
+            ['6','Osazování',true],
+            ['7','Pájení',true],
+            ['8','Oprava po pájení',true],
+            ['9','Programování',false],
+            ['10','Lakování',false],
+            ['11','Výstupní kontrola',true],
+            ['12','Balení',true],
+          ].map(([id,n,on]) => `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f3f4f6;">
+              <div>${id}. ${n}</div>
+              <div style="width:44px; height:26px; background:${on?'#1a56db':'#d1d5db'}; border-radius:13px; position:relative;">
+                <div style="width:22px; height:22px; background:#fff; border-radius:11px; position:absolute; top:2px; left:${on?'20px':'2px'}; transition:all 0.2s;"></div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+    ${bottomTabsTpv('prod')}
+  `
+}),
+
+// ─── DISPATCHER: Dashboard ─────────────────────────────────
+'disp-dash': () => ({
+  title: 'Dispečer – Přehled',
+  html: `
+    ${statusBar()}
+    ${topBar('Přehled výroby', 'Martin Svoboda · dispečer', '<span class="icon">➕</span>')}
+    <div class="content">
+      <div class="scroll">
+        <div class="stats">
+          <div class="stat-box"><b style="color:#1d4ed8">7</b><div class="lbl">Aktivních</div></div>
+          <div class="stat-box"><b style="color:#b91c1c">1</b><div class="lbl">Problém</div></div>
+          <div class="stat-box"><b style="color:#d97706">2</b><div class="lbl">Po termínu</div></div>
+          <div class="stat-box"><b>15</b><div class="lbl">Celkem</div></div>
+        </div>
+
+        <div class="filter-row">
+          <span class="filter-chip active">Aktivní</span>
+          <span class="filter-chip">Skryté</span>
+          <span class="filter-chip">Vše</span>
+        </div>
+
+        <div class="card has-left" style="border-left-color:#22c55e;">
+          <div class="card-row">
+            <span class="order-no">#260321</span>
+            <span class="badge badge-red">Urgentní</span>
+          </div>
+          <div class="name">Siemens · PCB-A-007 · Řídicí deska</div>
+          <div class="progress"><div class="progress-fill" style="width:35%"></div></div>
+          <div style="display:flex; justify-content:space-between; font-size:11px; color:#6b7280;">
+            <span>4/9 stanovišť</span>
+            <span>📅 27.4.2026 · V termínu</span>
+          </div>
+          <div class="sub-text" style="margin-top:4px;">Aktivní: Automat, AOI, Oprava po AOI, Osazování</div>
+        </div>
+
+        <div class="card has-left" style="border-left-color:#ef4444;">
+          <div class="card-row">
+            <span class="order-no">#260315</span>
+            <span class="badge badge-orange">Vysoká</span>
+          </div>
+          <div class="name">ABB · RB-004 · Snímač</div>
+          <div class="progress"><div class="progress-fill" style="width:78%"></div></div>
+          <div style="display:flex; justify-content:space-between; font-size:11px; color:#b91c1c;">
+            <span>7/9 stanovišť · ⚠️ problém</span>
+            <span>📅 22.4.2026 · Po termínu</span>
+          </div>
+        </div>
+
+        <div class="card has-left" style="border-left-color:#f59e0b;">
+          <div class="card-row">
+            <span class="order-no">#260318</span>
+            <span class="badge badge-blue">Normální</span>
+          </div>
+          <div class="name">Bosch · MB-012 · Napájecí zdroj</div>
+          <div class="progress"><div class="progress-fill" style="width:15%"></div></div>
+          <div style="display:flex; justify-content:space-between; font-size:11px; color:#d97706;">
+            <span>1/10 stanovišť</span>
+            <span>📅 25.4.2026 · Brzy</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    ${bottomTabsDispatcher('dash')}
+  `
+}),
+
+// ─── DISPATCHER: Detail zakázky s dílčími toky ────────────
+'disp-order': () => ({
+  title: 'Detail zakázky – dílčí toky',
+  html: `
+    ${statusBar()}
+    ${topBar('#260321', 'Siemens · PCB-A-007 · 1000 ks')}
+    <div class="tab-nav">
+      <div class="tab active">Stanoviště</div>
+      <div class="tab">Dokumenty</div>
+      <div class="tab">Poznámky</div>
+    </div>
+    <div class="content">
+      <div class="scroll">
+        <div class="info-box info">ℹ️ Dlouhý stisk stanoviště → zapnout/vypnout pro tuto zakázku.</div>
+
+        <div class="st-row">
+          <div class="st-col"><div class="st-dot" style="background:#15803d"></div><div class="st-line"></div></div>
+          <div class="st-card done">
+            <div class="card-row"><b>1. Sklad</b><span class="badge badge-green">Dokončeno</span></div>
+            <div class="sub-text">1000/1000 vychystáno · 22.4. 08:15</div>
+          </div>
+        </div>
+
+        <div class="st-row">
+          <div class="st-col"><div class="st-dot" style="background:#1d4ed8"></div><div class="st-line"></div></div>
+          <div class="st-card active">
+            <div class="card-row"><b>2. Automaty (Alfa)</b><span class="badge badge-blue">Probíhá</span></div>
+            <div class="qty-row">
+              <div class="qty-item"><b>1000</b><div class="lbl">Přišlo</div></div>
+              <div class="qty-item"><b style="color:#15803d">800</b><div class="lbl">Předáno</div></div>
+              <div class="qty-item"><b>200</b><div class="lbl">Rozpracováno</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="st-row">
+          <div class="st-col"><div class="st-dot" style="background:#1d4ed8"></div><div class="st-line"></div></div>
+          <div class="st-card active">
+            <div class="card-row"><b>3. AOI kontrola</b><span class="badge badge-blue">Probíhá</span></div>
+            <div class="qty-row">
+              <div class="qty-item"><b>800</b><div class="lbl">Přišlo</div></div>
+              <div class="qty-item"><b style="color:#15803d">200</b><div class="lbl">Předáno</div></div>
+              <div class="qty-item"><b>600</b><div class="lbl">Rozpracováno</div></div>
+            </div>
+            <div class="sub-text" style="margin-top:4px;">⬇ Ještě přijde 200 ks z Automatu</div>
+          </div>
+        </div>
+
+        <div class="st-row">
+          <div class="st-col"><div class="st-dot" style="background:#e5e7eb"></div><div class="st-line"></div></div>
+          <div class="st-card disabled" style="opacity:0.45">
+            <div class="card-row"><b>4. RTG (nepoužito)</b><span class="badge badge-gray">—</span></div>
+          </div>
+        </div>
+
+        <div class="st-row">
+          <div class="st-col"><div class="st-dot" style="background:#1d4ed8"></div><div class="st-line"></div></div>
+          <div class="st-card active">
+            <div class="card-row"><b>5. Oprava po AOI</b><span class="badge badge-orange">Čeká k opravě</span></div>
+            <div class="qty-row">
+              <div class="qty-item"><b>5</b><div class="lbl">Přišlo</div></div>
+              <div class="qty-item"><b>0</b><div class="lbl">Opraveno</div></div>
+              <div class="qty-item"><b>5</b><div class="lbl">Čeká</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="st-row">
+          <div class="st-col"><div class="st-dot" style="background:#1d4ed8"></div><div class="st-line"></div></div>
+          <div class="st-card active">
+            <div class="card-row"><b>6. Osazování</b><span class="badge badge-blue">Probíhá</span></div>
+            <div class="qty-row">
+              <div class="qty-item"><b>195</b><div class="lbl">Přišlo</div></div>
+              <div class="qty-item"><b style="color:#15803d">50</b><div class="lbl">Předáno</div></div>
+              <div class="qty-item"><b>145</b><div class="lbl">Rozpracováno</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="st-row">
+          <div class="st-col"><div class="st-dot" style="background:#6b7280"></div></div>
+          <div class="st-card">
+            <div class="card-row"><b>7. Pájení vlnou (W-142)</b><span class="badge badge-gray">Čeká</span></div>
+            <div class="sub-text">0/1000, ještě nic nepřišlo</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    ${bottomTabsDispatcher('orders')}
+  `
+}),
+
+// ─── DISPATCHER: Nová zakázka ──────────────────────────────
+'disp-new': () => ({
+  title: 'Nová zakázka',
+  html: `
+    ${statusBar()}
+    ${topBar('Nová zakázka')}
+    <div class="content">
+      <div class="scroll">
+        <div class="section-title">Základní informace</div>
+        <div class="card">
+          <div class="form-row">
+            <label>Číslo zakázky * (6 číslic)</label>
+            <div style="display:flex; gap:8px;">
+              <input type="text" value="260322" style="flex:1;">
+              <button class="btn btn-outline" style="padding:10px 14px;">🔄</button>
+            </div>
+          </div>
+          <div class="form-row">
+            <label>Typ výroby *</label>
+            <div class="chip-row">
+              <span class="chip">Nová</span>
+              <span class="chip selected">Opakovaná</span>
+              <span class="chip">Revize</span>
+            </div>
+          </div>
+          <div class="form-row">
+            <label>Množství (ks) *</label>
+            <input type="number" value="1000">
+          </div>
+        </div>
+
+        <div class="section-title">Zákazník a produkt</div>
+        <div class="card">
+          <div class="form-row">
+            <label>Zákazník *</label>
+            <input type="text" value="Siemens">
+          </div>
+          <div class="form-row">
+            <label>Produkt *</label>
+            <input type="text" value="PCB-A-007">
+          </div>
+          <div class="info-box ok">✅ V knihovně jsou 3 dokumenty – automaticky se zkopírují k zakázce (typ: Opakovaná).</div>
+        </div>
+
+        <div class="section-title">Termín a priorita</div>
+        <div class="card">
+          <div class="form-row">
+            <label>Termín</label>
+            <input type="date" value="2026-05-02">
+          </div>
+          <div class="form-row">
+            <label>Priorita</label>
+            <div class="chip-row">
+              <span class="chip">Nízká</span>
+              <span class="chip">Normální</span>
+              <span class="chip selected">Vysoká</span>
+              <span class="chip">Urgentní</span>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-block" style="margin-top:12px;">✅ Vytvořit zakázku</button>
+      </div>
+    </div>
+  `
+}),
+
+// ─── DISPATCHER: Timeline ─────────────────────────────────
+'disp-timeline': () => ({
+  title: 'Timeline dílčích toků',
+  html: `
+    ${statusBar()}
+    ${topBar('#260321 · Tok výroby', '1000 ks')}
+    <div class="content">
+      <div class="scroll">
+        <div class="info-box info">ℹ️ Vizualizace, jak ks putují mezi stanovišti v čase.</div>
+
+        <div class="section-title">Poslední pohyby (auto)</div>
+        <ul class="plain">
+          <li>🔵 <b>08:15</b> — 1000 ks vychystáno ze Skladu → Automat</li>
+          <li>🔵 <b>09:02</b> — Automat: 300 ks → AOI</li>
+          <li>🔵 <b>09:45</b> — Automat: 500 ks → AOI (celkem 800)</li>
+          <li>🟢 <b>10:20</b> — AOI: 200 ks OK → Osazování</li>
+          <li>🟠 <b>10:22</b> — AOI: 5 ks k opravě → Oprava po AOI</li>
+          <li>🟢 <b>11:14</b> — Osazování: 50 ks → Pájení</li>
+          <li>⏳ <b>teď</b> — Čeká se na pájení vlnou</li>
+        </ul>
+
+        <div class="section-title">Souhrn dílčích toků</div>
+        <div class="card">
+          <div class="bar-row"><div class="bar-label">Sklad</div><div class="bar-bg"><div class="bar-fill" style="width:100%; background:#15803d;"></div></div><div style="font-size:11px;">1000</div></div>
+          <div class="bar-row"><div class="bar-label">Automat</div><div class="bar-bg"><div class="bar-fill" style="width:80%; background:#1d4ed8;"></div></div><div style="font-size:11px;">800</div></div>
+          <div class="bar-row"><div class="bar-label">AOI</div><div class="bar-bg"><div class="bar-fill" style="width:20%; background:#1d4ed8;"></div></div><div style="font-size:11px;">200</div></div>
+          <div class="bar-row"><div class="bar-label">Oprava AOI</div><div class="bar-bg"><div class="bar-fill" style="width:0.5%; background:#d97706;"></div></div><div style="font-size:11px;">5</div></div>
+          <div class="bar-row"><div class="bar-label">Osazování</div><div class="bar-bg"><div class="bar-fill" style="width:5%; background:#1d4ed8;"></div></div><div style="font-size:11px;">50</div></div>
+          <div class="bar-row"><div class="bar-label">Pájení</div><div class="bar-bg"><div class="bar-fill" style="width:0%;"></div></div><div style="font-size:11px;">0</div></div>
+        </div>
+      </div>
+    </div>
+    ${bottomTabsDispatcher('orders')}
+  `
+}),
+
+// ─── MANAGEMENT: KPI ─────────────────────────────────────
+'mgmt-kpi': () => ({
+  title: 'Vedení – KPI dashboard',
+  html: `
+    ${statusBar()}
+    ${topBar('KPI – duben 2026', 'Eva Králová · vedení')}
+    <div class="content">
+      <div class="scroll">
+
+        <div style="display:flex; gap:8px;">
+          <div class="kpi-tile" style="flex:1;">
+            <div class="kpi-big">94.2%</div>
+            <div class="kpi-label">OTD – dodání v termínu</div>
+            <div style="font-size:11px; color:#15803d; margin-top:4px;">↑ 2.1% vs. březen</div>
+          </div>
+          <div class="kpi-tile" style="flex:1;">
+            <div class="kpi-big" style="color:#15803d;">97.8%</div>
+            <div class="kpi-label">FPY – průchod napoprvé</div>
+            <div style="font-size:11px; color:#b91c1c; margin-top:4px;">↓ 0.5% vs. březen</div>
+          </div>
+        </div>
+
+        <div class="kpi-tile">
+          <div class="kpi-label" style="margin-bottom:10px;">Vytížení automatů</div>
+          <div class="bar-row"><div class="bar-label">Alfa</div><div class="bar-bg"><div class="bar-fill" style="width:87%; background:#1d4ed8;"></div></div><div style="font-size:11px;">87%</div></div>
+          <div class="bar-row"><div class="bar-label">Beta</div><div class="bar-bg"><div class="bar-fill" style="width:72%; background:#1d4ed8;"></div></div><div style="font-size:11px;">72%</div></div>
+          <div class="bar-row"><div class="bar-label">Gama</div><div class="bar-bg"><div class="bar-fill" style="width:94%; background:#b91c1c;"></div></div><div style="font-size:11px;">94%</div></div>
+          <div class="bar-row"><div class="bar-label">Delta</div><div class="bar-bg"><div class="bar-fill" style="width:65%; background:#1d4ed8;"></div></div><div style="font-size:11px;">65%</div></div>
+          <div class="bar-row"><div class="bar-label">Eta</div><div class="bar-bg"><div class="bar-fill" style="width:41%; background:#d97706;"></div></div><div style="font-size:11px;">41%</div></div>
+          <div class="bar-row"><div class="bar-label">Theta</div><div class="bar-bg"><div class="bar-fill" style="width:88%; background:#1d4ed8;"></div></div><div style="font-size:11px;">88%</div></div>
+        </div>
+
+        <div class="kpi-tile">
+          <div class="kpi-label" style="margin-bottom:10px;">Top problémové produkty (scrap)</div>
+          <ul class="plain">
+            <li>🔴 <b>ABB RB-004</b> – 3.2% zmetků (42/1320)</li>
+            <li>🟠 <b>Siemens PCB-A-007</b> – 1.8%</li>
+            <li>🟡 <b>Bosch MB-012</b> – 0.9%</li>
+          </ul>
+        </div>
+
+        <div class="kpi-tile">
+          <div class="kpi-label" style="margin-bottom:10px;">Průměrný čas na stanovišti</div>
+          <ul class="plain">
+            <li>Automaty: <b>2 h 15 min</b> / 1000 ks</li>
+            <li>AOI: <b>40 min</b> / 1000 ks</li>
+            <li>Osazování: <b>5 h 30 min</b> / 1000 ks</li>
+            <li>Pájení vlnou: <b>1 h 10 min</b> / 1000 ks</li>
+          </ul>
+        </div>
+
+        <button class="btn btn-primary btn-block">📄 Export do PDF</button>
+
+      </div>
+    </div>
+    ${bottomTabsMgmt('kpi')}
+  `
+}),
+
+// ─── MANAGEMENT: PDF ─────────────────────────────────────
+'mgmt-pdf': () => ({
+  title: 'PDF export statistik',
+  html: `
+    ${statusBar()}
+    ${topBar('Export reportu')}
+    <div class="content">
+      <div class="scroll">
+
+        <div class="section-title">Typ reportu</div>
+        <div class="card">
+          <div class="chip-row">
+            <span class="chip selected">KPI měsíčně</span>
+            <span class="chip">Zakázka (jedna)</span>
+            <span class="chip">Produkt</span>
+            <span class="chip">Stanoviště</span>
+          </div>
+        </div>
+
+        <div class="section-title">Období</div>
+        <div class="card">
+          <div class="form-row"><label>Od</label><input type="date" value="2026-04-01"></div>
+          <div class="form-row"><label>Do</label><input type="date" value="2026-04-30"></div>
+        </div>
+
+        <div class="section-title">Co zahrnout</div>
+        <div class="card">
+          <ul class="plain">
+            <li><input type="checkbox" checked> Souhrnné KPI (OTD, FPY)</li>
+            <li><input type="checkbox" checked> Vytížení strojů</li>
+            <li><input type="checkbox" checked> Top problémové produkty</li>
+            <li><input type="checkbox" checked> Průměrné časy</li>
+            <li><input type="checkbox"> Seznam všech zakázek</li>
+            <li><input type="checkbox"> Audit log</li>
+          </ul>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:14px;">
+          <button class="btn btn-outline btn-block">👁️ Náhled</button>
+          <button class="btn btn-primary btn-block">📄 Stáhnout PDF</button>
+        </div>
+
+        <div class="info-box info" style="margin-top:10px;">ℹ️ PDF se vygeneruje lokálně v aplikaci, nic se neposílá ven. Lze sdílet přes AirDrop / email.</div>
+
+      </div>
+    </div>
+    ${bottomTabsMgmt('reports')}
+  `
+}),
+
+// ─── MANAGEMENT: Dark mode ────────────────────────────────
+'mgmt-dark': () => ({
+  title: 'Dark mode (vedení / admin)',
+  extraClass: 'dark',
+  html: `
+    ${statusBar()}
+    <div class="top-bar" style="background:#0f172a; border-bottom:1px solid #1e293b;">
+      <div><h2>KPI – duben 2026</h2><div class="sub">Eva Králová · vedení</div></div>
+    </div>
+    <div class="content" style="background:#0f172a; color:#e5e7eb;">
+      <div class="scroll">
+        <div style="display:flex; gap:8px;">
+          <div style="flex:1; background:#1e293b; border-radius:12px; padding:14px;">
+            <div style="font-size:28px; font-weight:800; color:#60a5fa;">94.2%</div>
+            <div style="font-size:12px; color:#94a3b8;">OTD – dodání v termínu</div>
+          </div>
+          <div style="flex:1; background:#1e293b; border-radius:12px; padding:14px;">
+            <div style="font-size:28px; font-weight:800; color:#34d399;">97.8%</div>
+            <div style="font-size:12px; color:#94a3b8;">FPY – napoprvé</div>
+          </div>
+        </div>
+        <div style="background:#1e293b; border-radius:12px; padding:14px; margin-top:10px;">
+          <div style="font-size:12px; color:#94a3b8; margin-bottom:10px;">Vytížení automatů</div>
+          <div class="bar-row"><div class="bar-label">Alfa</div><div class="bar-bg" style="background:#334155;"><div class="bar-fill" style="width:87%; background:#60a5fa;"></div></div><div style="font-size:11px;">87%</div></div>
+          <div class="bar-row"><div class="bar-label">Gama</div><div class="bar-bg" style="background:#334155;"><div class="bar-fill" style="width:94%; background:#ef4444;"></div></div><div style="font-size:11px;">94%</div></div>
+        </div>
+        <div class="info-box info" style="background:#1e40af; color:#bfdbfe; margin-top:10px;">🌙 Dark mode je dostupný jen v rolích Vedení a Admin.</div>
+      </div>
+    </div>
+    ${bottomTabsMgmt('kpi')}
+  `
+}),
+
+// ─── ADMIN: Uživatelé ─────────────────────────────────────
+'adm-users': () => ({
+  title: 'Admin – Uživatelé a kvalifikace',
+  html: `
+    ${statusBar()}
+    ${topBar('Správa uživatelů', '12 uživatelů', '<span class="icon">➕</span>')}
+    <div class="content">
+      <div class="scroll">
+        <input type="text" placeholder="🔍 Hledat…" style="margin-bottom:10px;">
+
+        <div class="card">
+          <div class="card-row">
+            <div>
+              <b>Jan Novák</b>
+              <div class="sub-text">jan.novak@firma.cz</div>
+            </div>
+            <span class="badge badge-blue">Operátor</span>
+          </div>
+          <div style="margin-top:8px;">
+            <div style="font-size:11px; color:#6b7280; margin-bottom:4px;">Kvalifikace (3):</div>
+            <div class="chip-row">
+              <span class="chip selected" style="font-size:11px;">aoi</span>
+              <span class="chip selected" style="font-size:11px;">oprava_aoi</span>
+              <span class="chip selected" style="font-size:11px;">vystupni_kontrola</span>
+              <span class="chip" style="font-size:11px;">+ přidat</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-row">
+            <div>
+              <b>Petr Dvořák</b>
+              <div class="sub-text">petr.dvorak@firma.cz</div>
+            </div>
+            <span class="badge badge-green">TPV</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-row">
+            <div>
+              <b>Martin Svoboda</b>
+              <div class="sub-text">martin.svoboda@firma.cz</div>
+            </div>
+            <span class="badge badge-orange">Dispečer</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-row">
+            <div>
+              <b>Eva Králová</b>
+              <div class="sub-text">eva.kralova@firma.cz</div>
+            </div>
+            <span class="badge badge-gray">Vedení</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    ${bottomTabsAdmin('admin')}
+  `
+}),
+
+// ─── ADMIN: Audit log ─────────────────────────────────────
+'adm-audit': () => ({
+  title: 'Admin – Audit log',
+  html: `
+    ${statusBar()}
+    ${topBar('Audit log', 'Všechny změny')}
+    <div class="content">
+      <div class="scroll">
+        <input type="text" placeholder="🔍 Hledat podle zakázky, uživatele…" style="margin-bottom:10px;">
+
+        <div class="card">
+          <div style="font-size:11px; color:#6b7280;">23.4.2026 09:45</div>
+          <b style="font-size:13px;">#260321 · Automat → AOI</b>
+          <div class="sub-text">Jan Novák předal 500 ks z Automatu na AOI</div>
+        </div>
+        <div class="card">
+          <div style="font-size:11px; color:#6b7280;">23.4.2026 09:20</div>
+          <b style="font-size:13px;">#260321 · Status change</b>
+          <div class="sub-text">Jan Novák: Automat z „waiting" → „in_progress"</div>
+        </div>
+        <div class="card">
+          <div style="font-size:11px; color:#6b7280;">23.4.2026 09:15</div>
+          <b style="font-size:13px;">#260321 · Dokumenty</b>
+          <div class="sub-text">Petr Dvořák nahrál BOM_PCB-A-007_v3.xlsx</div>
+        </div>
+        <div class="card">
+          <div style="font-size:11px; color:#6b7280;">22.4.2026 14:32</div>
+          <b style="font-size:13px;">#260321 · Vytvořeno</b>
+          <div class="sub-text">Martin Svoboda vytvořil zakázku (1000 ks, Siemens PCB-A-007)</div>
+        </div>
+        <div class="card">
+          <div style="font-size:11px; color:#6b7280;">22.4.2026 14:10</div>
+          <b style="font-size:13px;">#260315 · Skryto</b>
+          <div class="sub-text">Eva Králová skryla dokončenou zakázku</div>
+        </div>
+      </div>
+    </div>
+    ${bottomTabsAdmin('audit')}
+  `
+}),
+
+// ─── ADMIN: Hard-delete ──────────────────────────────────
+'adm-delete': () => ({
+  title: 'Admin – Hard-delete',
+  html: `
+    ${statusBar()}
+    ${topBar('#260100 · Archivace', '2023 · dávno dokončeno')}
+    <div class="content">
+      <div class="scroll">
+        <div class="info-box" style="background:#fee2e2; color:#991b1b;">
+          ⚠️ <b>Pozor!</b> Hard-delete je <b>nevratná operace</b>. Všechna data zakázky (stanoviště, dokumenty, poznámky, audit log) se trvale smažou. Tuhle akci může provést <b>pouze admin</b>.
+        </div>
+
+        <div class="card">
+          <b>#260100 · Siemens · PCB-A-001</b>
+          <div class="sub-text">Vytvořeno: 12.1.2023</div>
+          <div class="sub-text">Dokončeno: 28.1.2023</div>
+          <div class="sub-text">Skryto: 1.2.2023</div>
+        </div>
+
+        <div class="section-title">Co se smaže</div>
+        <ul class="plain">
+          <li>📋 Zakázka (1 záznam)</li>
+          <li>🏭 12 stanovišť se stavy</li>
+          <li>📄 3 dokumenty (i soubory v úložišti)</li>
+          <li>💬 5 poznámek</li>
+          <li>📜 42 záznamů audit logu</li>
+        </ul>
+
+        <div class="form-row" style="margin-top:14px;">
+          <label>Pro potvrzení zadej číslo zakázky:</label>
+          <input type="text" placeholder="260100">
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <button class="btn btn-outline btn-block">Zrušit</button>
+          <button class="btn btn-danger btn-block">🗑️ Trvale smazat</button>
+        </div>
+      </div>
+    </div>
+    ${bottomTabsAdmin('admin')}
+  `
+}),
+
+};
+
+// ═══════════════════════════════════════════════════════════════
+// UI LOGIKA
+// ═══════════════════════════════════════════════════════════════
+
+let currentRole = 'operator';
+let currentScreens = []; // array of screen ids to display (2 phones max)
+
+function renderScreenPicker() {
+  const list = SCREENS[currentRole];
+  const container = document.getElementById('screens-for-role');
+  container.innerHTML = list.map((s, i) =>
+    `<button class="screen-btn ${currentScreens.includes(s.id) ? 'active' : ''}" data-screen="${s.id}">${s.label}</button>`
+  ).join('');
+  container.querySelectorAll('.screen-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.screen;
+      if (currentScreens.includes(id)) {
+        currentScreens = currentScreens.filter((s) => s !== id);
+      } else {
+        if (currentScreens.length >= 2) currentScreens.shift();
+        currentScreens.push(id);
+      }
+      renderScreenPicker();
+      renderPhones();
+    });
+  });
+}
+
+function renderPhones() {
+  const wrap = document.getElementById('phones');
+  if (currentScreens.length === 0) {
+    wrap.innerHTML = '<div style="color:#fff; opacity:0.7; text-align:center; padding:40px;">Vyber obrazovku výše ↑</div>';
+    return;
+  }
+  wrap.innerHTML = currentScreens.map((id) => {
+    const fn = RENDER[id];
+    if (!fn) return '';
+    const data = fn();
+    return `
+      <div>
+        <div class="phone ${data.extraClass || ''}">
+          <div class="phone-screen ${data.extraClass || ''}">${data.html}</div>
+        </div>
+        <div class="phone-caption">${data.title}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+document.querySelectorAll('.role-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.role-btn').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentRole = btn.dataset.role;
+    currentScreens = [];
+    // Auto-select first screen of role
+    const first = SCREENS[currentRole][0];
+    if (first) currentScreens = [first.id];
+    renderScreenPicker();
+    renderPhones();
+  });
+});
+
+// Init
+renderScreenPicker();
+currentScreens = [SCREENS.operator[0].id];
+renderScreenPicker();
+renderPhones();
+
+</script>
+
+</body>
+</html>

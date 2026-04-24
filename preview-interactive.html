@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<title>Výroba – Interaktivní prototyp</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+    min-height: 100vh; padding: 20px; color: #111;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .toolbar {
+    background: rgba(255,255,255,0.08); backdrop-filter: blur(10px);
+    border-radius: 12px; padding: 14px 18px; margin-bottom: 18px; color: #fff;
+  }
+  .toolbar h1 { font-size: 20px; margin-bottom: 6px; }
+  .toolbar p  { font-size: 12px; opacity: 0.8; margin-bottom: 10px; }
+  .role-picker { display: flex; gap: 6px; flex-wrap: wrap; }
+  .role-btn {
+    padding: 6px 12px; border-radius: 8px; border: none;
+    background: rgba(255,255,255,0.15); color: #fff;
+    font-size: 12px; font-weight: 500; cursor: pointer;
+  }
+  .role-btn.active { background: #fff; color: #1a56db; }
+
+  .phone-wrap { display: flex; justify-content: center; }
+  .phone {
+    width: 390px; height: 844px;
+    background: #000; border-radius: 48px; padding: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  .phone-screen {
+    width: 100%; height: 100%;
+    background: #f3f4f6; border-radius: 36px;
+    overflow: hidden; position: relative;
+    display: flex; flex-direction: column;
+  }
+  .status-bar {
+    height: 42px; background: #1a56db; color: #fff;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 24px; font-size: 13px; font-weight: 600; flex-shrink: 0;
+  }
+  .top-bar {
+    padding: 12px 18px; background: #1a56db; color: #fff;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-shrink: 0;
+  }
+  .top-bar h2 { font-size: 16px; font-weight: 700; }
+  .top-bar .sub { font-size: 11px; opacity: 0.85; margin-top: 1px; }
+  .top-bar .back { cursor: pointer; font-size: 20px; }
+  .top-bar .icon { cursor: pointer; font-size: 18px; padding: 4px 8px; }
+  .content { flex: 1; overflow-y: auto; background: #f3f4f6; }
+  .scroll { padding: 14px; }
+
+  .card {
+    background: #fff; border-radius: 12px; padding: 14px;
+    margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    cursor: pointer; transition: transform 0.08s;
+    border-left: 3px solid transparent;
+  }
+  .card:active { transform: scale(0.98); }
+  .card.flat { cursor: default; }
+  .card.flat:active { transform: none; }
+
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .order-no { font-size: 15px; font-weight: 700; color: #111827; }
+  .sub-text { font-size: 11px; color: #6b7280; margin-top: 2px; }
+  .name { font-size: 13px; color: #374151; margin-top: 4px; }
+
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 6px;
+    font-size: 11px; font-weight: 600;
+  }
+  .badge-blue  { background: #dbeafe; color: #1d4ed8; }
+  .badge-red   { background: #fee2e2; color: #b91c1c; }
+  .badge-green { background: #dcfce7; color: #15803d; }
+  .badge-amber { background: #fef3c7; color: #b45309; }
+  .badge-gray  { background: #f3f4f6; color: #6b7280; }
+  .badge-purple{ background: #ede9fe; color: #6d28d9; }
+
+  .section-title {
+    font-size: 11px; color: #6b7280; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    margin: 14px 0 6px 4px;
+  }
+
+  .btn {
+    display: inline-block; padding: 10px 14px; border-radius: 10px;
+    border: none; font-size: 14px; font-weight: 600; cursor: pointer;
+    background: #1a56db; color: #fff; text-align: center;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-block { display: block; width: 100%; }
+  .btn-outline { background: #fff; color: #1a56db; border: 1.5px solid #1a56db; }
+  .btn-danger  { background: #dc2626; }
+  .btn-green   { background: #15803d; }
+  .btn-amber   { background: #b45309; }
+  .btn-gray    { background: #e5e7eb; color: #374151; }
+  .btn-sm { padding: 6px 10px; font-size: 12px; border-radius: 8px; }
+
+  .chip {
+    display: inline-block; padding: 4px 10px; border-radius: 14px;
+    background: #f3f4f6; border: 1px solid #e5e7eb; color: #374151;
+    font-size: 12px; cursor: pointer; margin-right: 4px; margin-bottom: 4px;
+  }
+  .chip.active { background: #1a56db; color: #fff; border-color: #1a56db; }
+  .chip.off    { opacity: 0.4; text-decoration: line-through; }
+
+  .tabs-bottom {
+    display: flex; background: #fff; border-top: 1px solid #e5e7eb;
+    padding: 6px 0 10px; flex-shrink: 0;
+  }
+  .tab-bottom {
+    flex: 1; text-align: center; font-size: 10px; color: #6b7280;
+    cursor: pointer; padding: 4px 0;
+  }
+  .tab-bottom .ic { font-size: 20px; display: block; margin-bottom: 2px; }
+  .tab-bottom.active { color: #1a56db; font-weight: 600; }
+
+  .input {
+    width: 100%; padding: 10px 12px; border: 1px solid #d1d5db;
+    border-radius: 8px; font-size: 14px; background: #fff;
+  }
+  .input:focus { outline: none; border-color: #1a56db; }
+  .form-label { font-size: 12px; color: #6b7280; margin-bottom: 4px; display: block; font-weight: 600; }
+  .form-row { margin-bottom: 12px; }
+
+  .info-box {
+    padding: 10px 12px; border-radius: 8px;
+    background: #eff6ff; color: #1e3a8a; font-size: 12px; margin-bottom: 10px;
+  }
+  .info-box.warn  { background: #fef3c7; color: #78350f; }
+  .info-box.error { background: #fee2e2; color: #991b1b; }
+  .info-box.ok    { background: #dcfce7; color: #14532d; }
+
+  /* Station grid */
+  .st-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .st-tile {
+    background: #fff; border-radius: 10px; padding: 10px;
+    border: 1px solid #e5e7eb; cursor: pointer;
+    border-left-width: 4px;
+  }
+  .st-tile.off { opacity: 0.35; }
+  .st-tile.done  { border-left-color: #15803d; }
+  .st-tile.prog  { border-left-color: #1d4ed8; }
+  .st-tile.wait  { border-left-color: #9ca3af; }
+  .st-tile.issue { border-left-color: #dc2626; }
+  .st-tile .st-name { font-size: 12px; font-weight: 600; color: #111827; }
+  .st-tile .st-meta { font-size: 10px; color: #6b7280; margin-top: 2px; }
+
+  /* Counter */
+  .counter { display: flex; align-items: center; gap: 8px; }
+  .counter button {
+    width: 34px; height: 34px; border-radius: 8px; border: 1px solid #d1d5db;
+    background: #fff; font-size: 18px; cursor: pointer; font-weight: 700;
+  }
+  .counter input {
+    flex: 1; text-align: center; padding: 8px; font-size: 16px;
+    border: 1px solid #d1d5db; border-radius: 8px; font-weight: 700;
+  }
+
+  /* Face ID */
+  .face-wrap {
+    flex: 1; background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+    color: #fff; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 32px; padding: 30px;
+  }
+  .face-circle {
+    width: 140px; height: 140px; border-radius: 70px;
+    border: 3px solid #60a5fa; display: flex;
+    align-items: center; justify-content: center; font-size: 60px;
+    animation: pulse 1.4s infinite; cursor: pointer;
+  }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(96,165,250,0.6); }
+    50%     { box-shadow: 0 0 0 20px rgba(96,165,250,0); }
+  }
+
+  .list-divider { border-top: 1px solid #e5e7eb; margin: 10px 0; }
+
+  .pill {
+    display: inline-block; padding: 3px 10px; border-radius: 12px;
+    font-size: 10px; font-weight: 700; margin-right: 4px;
+  }
+
+  .toast {
+    position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
+    background: #111827; color: #fff; padding: 10px 18px; border-radius: 24px;
+    font-size: 13px; opacity: 0; transition: opacity 0.25s;
+    pointer-events: none; z-index: 100; white-space: nowrap;
+  }
+  .toast.show { opacity: 0.95; }
+
+  .modal-bg {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 50; padding: 24px;
+  }
+  .modal {
+    background: #fff; border-radius: 14px; padding: 18px;
+    width: 100%; max-width: 320px;
+  }
+  .modal h3 { margin-bottom: 10px; font-size: 16px; }
+
+  .side-note {
+    margin-top: 20px; padding: 14px; background: rgba(255,255,255,0.08);
+    border-radius: 10px; color: #e5e7eb; font-size: 12px;
+    line-height: 1.6;
+  }
+  .side-note b { color: #fbbf24; }
+  .side-note ul { margin-left: 20px; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="toolbar">
+    <h1>🏭 Výroba – Interaktivní prototyp</h1>
+    <p>Skutečně klikatelný prototyp. Stav se drží v paměti – když předáš 50 ks na další stanoviště, uvidíš to v timeline. Přihlas se pomocí Face ID, pak si zkus proklikat různé funkce.</p>
+    <div class="role-picker" id="role-picker">
+      <button class="role-btn active" data-role="operator">👷 Operátor (Jan)</button>
+      <button class="role-btn" data-role="tpv">🧪 TPV (Eva)</button>
+      <button class="role-btn" data-role="dispatcher">📋 Dispečer (Tomáš)</button>
+      <button class="role-btn" data-role="management">📈 Vedení (Marie)</button>
+      <button class="role-btn" data-role="admin">⚙️ Admin (IT)</button>
+    </div>
+  </div>
+
+  <div class="phone-wrap">
+    <div class="phone"><div class="phone-screen" id="screen"></div></div>
+  </div>
+
+  <div class="side-note">
+    <b>💡 Co vyzkoušet:</b>
+    <ul>
+      <li><b>Operátor:</b> klik na zakázku v „Mé stanoviště" → „Spustit" → naskočí timer. Potom „Dokončit na tomto stanovišti" → zadej 50 z 200 ks OK, 2 na opravu, 0 zmetků → „Předat 50 ks dál". Vrať se do zakázky a uvidíš timeline.</li>
+      <li><b>TPV:</b> otevři produkt, přepni zapnutá/vypnutá stanoviště (klik na dlaždici).</li>
+      <li><b>Dispečer:</b> vytvoř novou zakázku (autocomplete zákazníka), zobraz detail se všemi toky.</li>
+      <li><b>Admin:</b> klik na uživatele, přepni kvalifikace.</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DATA (MOCK, V PAMĚTI)
+// ═══════════════════════════════════════════════════════════════
+
+const STATIONS = [
+  { id: 1,  name: 'Sklad / výdej' },
+  { id: 2,  name: 'Automat 1 – SMT' },
+  { id: 3,  name: 'Automat 2 – SMT' },
+  { id: 4,  name: 'Pec' },
+  { id: 5,  name: 'AOI' },
+  { id: 6,  name: 'RTG' },
+  { id: 7,  name: 'Pájení vlnou' },
+  { id: 8,  name: 'Selektivní pájení' },
+  { id: 9,  name: 'Ruční osazování' },
+  { id: 10, name: 'Mytí' },
+  { id: 11, name: 'Testování' },
+  { id: 12, name: 'Balení / expedice' },
+];
+
+const QUALS = [
+  'sklad','automat','pec','aoi','rtg',
+  'pajeni_vlna','pajeni_selektivni','pajeni_rucni',
+  'myti','testovani','baleni','osazovani','programovani','kontrola',
+];
+
+// Which qualifications unlock which station
+const STATION_QUAL = {
+  1:'sklad', 2:'automat', 3:'automat', 4:'pec', 5:'aoi', 6:'rtg',
+  7:'pajeni_vlna', 8:'pajeni_selektivni', 9:'osazovani',
+  10:'myti', 11:'testovani', 12:'baleni',
+};
+
+const USERS = {
+  operator:   { id:'u1', name:'Jan Novák',   role:'operator',   email:'jan.novak@firma.cz',   quals:['aoi','testovani','kontrola'], defaultStation: 5 },
+  tpv:        { id:'u2', name:'Eva Svobodová', role:'tpv',       email:'eva@firma.cz',          quals:[] },
+  dispatcher: { id:'u3', name:'Tomáš Dvořák', role:'dispatcher', email:'tomas@firma.cz',        quals:[] },
+  management: { id:'u4', name:'Marie Nová',   role:'management', email:'marie@firma.cz',        quals:[] },
+  admin:      { id:'u5', name:'IT Admin',    role:'admin',      email:'admin@firma.cz',        quals:[] },
+};
+
+// All users admin manages
+const ALL_USERS = [
+  { id:'u1', name:'Jan Novák',    role:'operator',   quals:['aoi','testovani','kontrola'] },
+  { id:'u2', name:'Eva Svobodová', role:'tpv',       quals:[] },
+  { id:'u3', name:'Tomáš Dvořák', role:'dispatcher', quals:[] },
+  { id:'u4', name:'Marie Nová',   role:'management', quals:[] },
+  { id:'u5', name:'IT Admin',     role:'admin',      quals:[] },
+  { id:'u6', name:'Petr Krause',  role:'operator',   quals:['automat','pec','pajeni_vlna'] },
+  { id:'u7', name:'Lucie Hájková',role:'operator',   quals:['osazovani','pajeni_rucni'] },
+];
+
+const CUSTOMERS = [
+  { id:'c1', name:'Siemens s.r.o.' },
+  { id:'c2', name:'ABB Czech' },
+  { id:'c3', name:'Škoda Auto' },
+  { id:'c4', name:'Bosch CZ' },
+];
+
+let PRODUCTS = [
+  { id:'p1', customer:'c1', code:'PCB-A-001', name:'Řídicí deska A', wave_program:'42', applicable:[1,2,3,4,5,7,10,11,12] },
+  { id:'p2', customer:'c1', code:'PCB-A-002', name:'Senzor modul',   wave_program:null, applicable:[1,2,3,4,5,11,12] },
+  { id:'p3', customer:'c2', code:'DRV-100',   name:'Měnič 100 A',    wave_program:'17', applicable:[1,2,4,5,7,9,11,12] },
+];
+
+// Orders + station states
+let ORDERS = [
+  {
+    id:'o1', number:'240118', customer:'c1', product:'p1', name:'Řídicí deska A',
+    type:'repeat', quantity:1000, priority:'high', due:'2026-04-28',
+    created:'2026-04-20', hidden:false,
+    stations: {
+       1:{status:'completed', ok:1000, rework:0, scrap:0},
+       2:{status:'completed', ok:1000, rework:0, scrap:0},
+       3:{status:'completed', ok:1000, rework:0, scrap:0},
+       4:{status:'completed', ok:1000, rework:0, scrap:0},
+       5:{status:'in_progress', ok:150, rework:3, scrap:1, started_at:Date.now()-45*60*1000},
+       6:{status:'waiting', applicable:false}, // RTG vypnuté
+       7:{status:'waiting', ok:0, rework:0, scrap:0},
+       8:{status:'waiting', applicable:false},
+       9:{status:'waiting', applicable:false},
+      10:{status:'waiting', ok:0, rework:0, scrap:0},
+      11:{status:'waiting', ok:0, rework:0, scrap:0},
+      12:{status:'waiting', ok:0, rework:0, scrap:0},
+    },
+    // partial transfers between stations
+    transfers: [
+      { from:1, to:2, qty:1000, at:'2026-04-20 09:12', by:'u1' },
+      { from:2, to:3, qty:500,  at:'2026-04-21 07:30', by:'u6' },
+      { from:2, to:3, qty:500,  at:'2026-04-21 11:05', by:'u6' },
+      { from:3, to:4, qty:1000, at:'2026-04-21 14:00', by:'u6' },
+      { from:4, to:5, qty:200,  at:'2026-04-22 08:15', by:'u6' },
+    ],
+    notes: [],
+  },
+  {
+    id:'o2', number:'240119', customer:'c2', product:'p3', name:'Měnič 100 A',
+    type:'new', quantity:50, priority:'urgent', due:'2026-04-25',
+    created:'2026-04-22', hidden:false,
+    stations: {
+       1:{status:'waiting', ok:0, rework:0, scrap:0},
+       2:{status:'waiting', ok:0, rework:0, scrap:0},
+       3:{status:'waiting', applicable:false},
+       4:{status:'waiting', ok:0, rework:0, scrap:0},
+       5:{status:'waiting', ok:0, rework:0, scrap:0},
+       6:{status:'waiting', applicable:false},
+       7:{status:'waiting', ok:0, rework:0, scrap:0},
+       8:{status:'waiting', applicable:false},
+       9:{status:'waiting', ok:0, rework:0, scrap:0},
+      10:{status:'waiting', applicable:false},
+      11:{status:'waiting', ok:0, rework:0, scrap:0},
+      12:{status:'waiting', ok:0, rework:0, scrap:0},
+    },
+    transfers: [],
+    notes: [],
+  },
+  {
+    id:'o3', number:'240115', customer:'c1', product:'p2', name:'Senzor modul',
+    type:'repeat', quantity:200, priority:'normal', due:'2026-05-05',
+    created:'2026-04-15', hidden:false,
+    stations: {
+       1:{status:'completed', ok:200, rework:0, scrap:0},
+       2:{status:'completed', ok:200, rework:0, scrap:0},
+       3:{status:'completed', ok:200, rework:0, scrap:0},
+       4:{status:'completed', ok:200, rework:0, scrap:0},
+       5:{status:'issue', ok:80, rework:15, scrap:5, issue_note:'AOI hlásí nesprávné pájení R12 – zastaveno'},
+       6:{status:'waiting', applicable:false},
+       7:{status:'waiting', applicable:false},
+       8:{status:'waiting', applicable:false},
+       9:{status:'waiting', applicable:false},
+      10:{status:'waiting', applicable:false},
+      11:{status:'waiting', ok:0, rework:0, scrap:0},
+      12:{status:'waiting', ok:0, rework:0, scrap:0},
+    },
+    transfers: [
+      { from:1, to:2, qty:200, at:'2026-04-16 08:00', by:'u1' },
+      { from:2, to:3, qty:200, at:'2026-04-17 09:00', by:'u6' },
+      { from:3, to:4, qty:200, at:'2026-04-17 14:00', by:'u6' },
+      { from:4, to:5, qty:100, at:'2026-04-18 09:00', by:'u6' },
+    ],
+    notes: [{ at:'2026-04-22 10:15', by:'u1', text:'Stopnul jsem – 15 ks zřejmě chyba osazovačky.' }],
+  },
+];
+
+let NOTIFICATIONS = [
+  { id:'n1', user:'u1', title:'Přišla dávka z Pece',     body:'200 ks na AOI – zakázka #240118', type:'transfer', priority:'normal', read:false, order:'o1', at:Date.now()-20*60*1000 },
+  { id:'n2', user:'u1', title:'Problém na AOI #240115',  body:'Eva hlásí vadné R12 – zastaveno',   type:'issue',    priority:'high',   read:false, order:'o3', at:Date.now()-2*60*60*1000 },
+  { id:'n3', user:'u1', title:'Kvalifikace přidána',     body:'Máš novou kvalifikaci: testování',  type:'system',   priority:'low',    read:true,  order:null, at:Date.now()-24*60*60*1000 },
+];
+
+// ═══════════════════════════════════════════════════════════════
+// APP STATE
+// ═══════════════════════════════════════════════════════════════
+
+let state = {
+  currentUser: null,          // USERS[role] after login
+  loggedIn: false,
+  route: { screen: 'login', params: {} },
+  modal: null,                // { type, props }
+  toast: null,
+};
+
+function navigate(screen, params = {}) {
+  state.route = { screen, params };
+  render();
+}
+function back() {
+  // simple back: go to home for the role
+  if (!state.loggedIn) return navigate('login');
+  const home = HOMES[state.currentUser.role];
+  navigate(home);
+}
+function showToast(msg, ms = 1800) {
+  state.toast = msg;
+  render();
+  setTimeout(() => { state.toast = null; render(); }, ms);
+}
+function openModal(type, props = {}) { state.modal = { type, props }; render(); }
+function closeModal() { state.modal = null; render(); }
+
+const HOMES = {
+  operator: 'op-queue',
+  tpv: 'tpv-products',
+  dispatcher: 'disp-dash',
+  management: 'mgmt-kpi',
+  admin: 'adm-users',
+};
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function customerName(id) { return CUSTOMERS.find(c => c.id === id)?.name || '?'; }
+function productById(id)  { return PRODUCTS.find(p => p.id === id); }
+function userName(id)     { return ALL_USERS.find(u => u.id === id)?.name || '?'; }
+function stationName(id)  { return STATIONS.find(s => s.id === id)?.name || '?'; }
+
+function priorityBadge(p) {
+  const c = { low:'badge-gray', normal:'badge-blue', high:'badge-amber', urgent:'badge-red' }[p] || 'badge-gray';
+  const l = { low:'Nízká', normal:'Normální', high:'Vysoká', urgent:'URGENT' }[p] || p;
+  return `<span class="badge ${c}">${l}</span>`;
+}
+function typeBadge(t) {
+  const c = { new:'badge-purple', repeat:'badge-green', revision:'badge-amber' }[t];
+  const l = { new:'Nová', repeat:'Opakovaná', revision:'Revize' }[t];
+  return `<span class="badge ${c}">${l}</span>`;
+}
+function statusBadge(s) {
+  const c = { waiting:'badge-gray', in_progress:'badge-blue', completed:'badge-green', issue:'badge-red', skipped:'badge-amber' }[s];
+  const l = { waiting:'Čeká', in_progress:'Probíhá', completed:'Hotovo', issue:'Problém', skipped:'Přeskočeno' }[s];
+  return `<span class="badge ${c}">${l}</span>`;
+}
+function deadlineColor(due) {
+  if (!due) return '';
+  const d = new Date(due), n = new Date('2026-04-24');
+  const diff = (d - n) / (24*3600*1000);
+  if (diff < 0) return '#dc2626';        // overdue
+  if (diff <= 3) return '#b45309';       // soon
+  return '#15803d';
+}
+
+/** How many qty has already arrived on a station (sum of transfers.to == st). */
+function arrivedAt(order, stId) {
+  return order.transfers.filter(t => t.to === stId).reduce((s, t) => s + t.qty, 0);
+}
+/** How many qty has been forwarded from a station. */
+function forwardedFrom(order, stId) {
+  return order.transfers.filter(t => t.from === stId).reduce((s, t) => s + t.qty, 0);
+}
+/** Next applicable station id after `from`. */
+function nextApplicable(order, from) {
+  for (let i = from + 1; i <= 12; i++) {
+    if (order.stations[i]?.applicable !== false) return i;
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATUS BAR & TOP BAR
+// ═══════════════════════════════════════════════════════════════
+
+function statusBar() {
+  return `<div class="status-bar"><span>9:41</span><span>●●●</span><span>100%</span></div>`;
+}
+function topBar({ title, sub, back = true, right = '' }) {
+  return `<div class="top-bar">
+    <div style="display:flex; align-items:center; gap:10px;">
+      ${back && state.route.screen !== HOMES[state.currentUser?.role] ? `<span class="back" data-act="back">‹</span>` : ''}
+      <div><h2>${esc(title)}</h2>${sub ? `<div class="sub">${esc(sub)}</div>` : ''}</div>
+    </div>
+    <div>${right}</div>
+  </div>`;
+}
+
+function tabsBottom() {
+  const role = state.currentUser.role;
+  const tabs = {
+    operator:   [['op-queue','🏭','Mé st.'], ['op-orders','📋','Zakázky'], ['op-notif','🔔','Notif.'], ['profile','👤','Profil']],
+    tpv:        [['tpv-products','📦','Produkty'], ['tpv-orders','📋','Zakázky'], ['tpv-lib','📚','Knihovna'], ['profile','👤','Profil']],
+    dispatcher: [['disp-dash','📊','Přehled'], ['disp-queue','🏭','Mé st.'], ['disp-orders','📋','Zakázky'], ['op-notif','🔔','Notif.'], ['profile','👤','Profil']],
+    management: [['mgmt-kpi','📈','KPI'], ['mgmt-orders','📋','Zakázky'], ['mgmt-reports','📄','Reporty'], ['profile','👤','Profil']],
+    admin:      [['adm-users','👥','Lidé'], ['disp-orders','📋','Zakázky'], ['adm-audit','📜','Audit'], ['profile','👤','Profil']],
+  }[role] || [];
+  return `<div class="tabs-bottom">${tabs.map(([id, ic, lbl]) => {
+    const active = state.route.screen === id || (id === 'op-queue' && state.route.screen === 'op-queue');
+    return `<div class="tab-bottom ${active ? 'active' : ''}" data-act="nav" data-screen="${id}">
+      <span class="ic">${ic}</span><span>${lbl}</span>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SCREENS
+// ═══════════════════════════════════════════════════════════════
+
+const SCREENS = {
+
+  // ─── LOGIN ────────────────────────────────────────────────
+  login: () => {
+    const roleKey = document.querySelector('.role-btn.active')?.dataset.role || 'operator';
+    const user = USERS[roleKey];
+    return `
+      ${statusBar()}
+      <div class="face-wrap">
+        <div style="text-align:center">
+          <div style="font-size:34px; font-weight:800;">VÝROBA</div>
+          <div style="opacity:0.7; margin-top:6px; font-size:13px;">${esc(user.email)}</div>
+        </div>
+        <div class="face-circle" data-act="login">👁️</div>
+        <div style="text-align:center">
+          <div style="font-size:14px; margin-bottom:6px;">Klikni na kolečko (Face ID)</div>
+          <div style="opacity:0.6; font-size:11px;">Po přihlášení budeš přesměrován na domovskou obrazovku role</div>
+        </div>
+        <button class="btn btn-outline" style="color:#fff; border-color:#60a5fa; background:transparent;" data-act="login">Přihlásit heslem</button>
+      </div>
+    `;
+  },
+
+  // ═══ OPERÁTOR ════════════════════════════════════════════
+  // Fronta na mém stanovišti
+  'op-queue': () => {
+    const u = state.currentUser;
+    const stId = u.defaultStation;
+    const queue = ORDERS.filter(o => !o.hidden && o.stations[stId]?.applicable !== false
+      && ['waiting','in_progress','issue'].includes(o.stations[stId]?.status));
+    return `
+      ${statusBar()}
+      ${topBar({ title: stationName(stId), sub: `${u.name} · operátor`, back: false })}
+      <div class="content"><div class="scroll">
+        <div class="info-box">
+          <b>Tvoje stanoviště:</b> ${stationName(stId)}<br>
+          <b>Kvalifikace:</b> ${u.quals.join(', ') || '—'}
+        </div>
+        <div class="section-title">Fronta (${queue.length})</div>
+        ${queue.length === 0 ? `<div class="card flat" style="text-align:center; color:#6b7280;">✅ Fronta je prázdná</div>` :
+          queue.map(o => {
+            const s = o.stations[stId];
+            const arr = arrivedAt(o, stId);
+            const total = o.quantity;
+            return `
+              <div class="card" data-act="nav" data-screen="op-station" data-id="${o.id}"
+                   style="border-left-color:${deadlineColor(o.due)}">
+                <div class="row">
+                  <span class="order-no">#${o.number}</span>
+                  ${statusBadge(s.status)}
+                </div>
+                <div class="name">${esc(customerName(o.customer))} · ${esc(productById(o.product).code)}</div>
+                <div class="row" style="margin-top:6px;">
+                  <span>${priorityBadge(o.priority)} ${typeBadge(o.type)}</span>
+                  <span class="sub-text">${arr}/${total} ks · do ${o.due}</span>
+                </div>
+              </div>
+            `;
+          }).join('')}
+      </div></div>
+      ${tabsBottom()}
+    `;
+  },
+
+  // Detail stanoviště pro konkrétní zakázku – tady se pracuje
+  'op-station': () => {
+    const o = ORDERS.find(x => x.id === state.route.params.id);
+    const u = state.currentUser;
+    const stId = state.route.params.stationId || u.defaultStation;
+    const s = o.stations[stId];
+    const arr = arrivedAt(o, stId);
+    const fwd = forwardedFrom(o, stId);
+    const done = s.ok + s.rework + s.scrap;
+    const remaining = arr - done;
+    const prod = productById(o.product);
+
+    const waveNote = stId === 7 ? `<div class="info-box">🔥 Program pájení vlnou: <b>${prod.wave_program || '—'}</b></div>` : '';
+
+    let elapsed = '';
+    if (s.status === 'in_progress' && s.started_at) {
+      const mins = Math.floor((Date.now() - s.started_at) / 60000);
+      elapsed = `<div class="info-box ok">⏱ Pracuješ: <b>${Math.floor(mins/60)}h ${mins%60}min</b> (auto-timer)</div>`;
+    }
+
+    return `
+      ${statusBar()}
+      ${topBar({ title: `#${o.number} · ${stationName(stId)}`, sub: `${esc(customerName(o.customer))} · ${esc(prod.code)}` })}
+      <div class="content"><div class="scroll">
+        ${waveNote}
+        ${elapsed}
+        ${s.status === 'issue' ? `<div class="info-box error">⚠️ <b>Problém:</b> ${esc(s.issue_note || '')}</div>` : ''}
+
+        <div class="card flat">
+          <div class="row"><b>Stav</b> ${statusBadge(s.status)}</div>
+          <div class="row" style="margin-top:8px;">
+            <span class="sub-text">Přišlo na stanoviště</span><b>${arr} / ${o.quantity} ks</b>
+          </div>
+          <div class="row"><span class="sub-text">Zpracováno</span><b>${done} ks</b></div>
+          <div class="row"><span class="sub-text">Odesláno dál</span><b>${fwd} ks</b></div>
+          <div class="row"><span class="sub-text">Zbývá na stanovišti</span><b>${remaining} ks</b></div>
+        </div>
+
+        ${s.status === 'waiting' && arr > 0 ? `
+          <button class="btn btn-block" data-act="start" data-id="${o.id}" data-st="${stId}">▶️ Spustit práci</button>
+        ` : ''}
+        ${s.status === 'waiting' && arr === 0 ? `
+          <div class="info-box warn">Čekám na dávku z předchozího stanoviště (${arrivedAt(o, stId-1)} ks už dorazilo? zkontroluj timeline).</div>
+        ` : ''}
+
+        ${s.status === 'in_progress' ? `
+          <div class="section-title">Zadej kvalitu</div>
+          <div class="card flat">
+            <div class="form-row">
+              <label class="form-label">OK kusy (✅ projde dál)</label>
+              <div class="counter">
+                <button data-act="count" data-id="${o.id}" data-st="${stId}" data-field="ok" data-delta="-1">−</button>
+                <input id="f-ok" value="${s.ok}" data-act="count-input" data-id="${o.id}" data-st="${stId}" data-field="ok">
+                <button data-act="count" data-id="${o.id}" data-st="${stId}" data-field="ok" data-delta="1">+</button>
+              </div>
+            </div>
+            <div class="form-row">
+              <label class="form-label">Oprava (🔧 vrátí se)</label>
+              <div class="counter">
+                <button data-act="count" data-id="${o.id}" data-st="${stId}" data-field="rework" data-delta="-1">−</button>
+                <input id="f-rework" value="${s.rework}" data-act="count-input" data-id="${o.id}" data-st="${stId}" data-field="rework">
+                <button data-act="count" data-id="${o.id}" data-st="${stId}" data-field="rework" data-delta="1">+</button>
+              </div>
+            </div>
+            <div class="form-row">
+              <label class="form-label">Zmetek (🗑 vyřazeno)</label>
+              <div class="counter">
+                <button data-act="count" data-id="${o.id}" data-st="${stId}" data-field="scrap" data-delta="-1">−</button>
+                <input id="f-scrap" value="${s.scrap}" data-act="count-input" data-id="${o.id}" data-st="${stId}" data-field="scrap">
+                <button data-act="count" data-id="${o.id}" data-st="${stId}" data-field="scrap" data-delta="1">+</button>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn btn-green btn-block" data-act="open-transfer" data-id="${o.id}" data-st="${stId}">
+            ▶️ Předat dávku na další stanoviště
+          </button>
+          <div style="height:8px"></div>
+          <button class="btn btn-amber btn-block" data-act="report-issue" data-id="${o.id}" data-st="${stId}">
+            ⚠️ Nahlásit problém
+          </button>
+          <div style="height:8px"></div>
+          <button class="btn btn-gray btn-block" data-act="pause" data-id="${o.id}" data-st="${stId}">⏸ Pauza / konec směny</button>
+        ` : ''}
+
+        <div class="section-title">Dokumenty</div>
+        <div class="card flat"><div class="sub-text">📄 BOM.pdf · 📐 Osazovací výkres.pdf · 📋 Průvodní list.pdf</div></div>
+
+        <div class="section-title">Poznámky (${o.notes.length})</div>
+        ${o.notes.length === 0 ? `<div class="card flat"><div class="sub-text">Žádné poznámky.</div></div>` :
+          o.notes.map(n => `<div class="card flat">
+            <div class="sub-text">${esc(n.at)} · ${esc(userName(n.by))}</div>
+            <div class="name">${esc(n.text)}</div>
+          </div>`).join('')}
+      </div></div>
+      ${tabsBottom()}
+    `;
+  },
+
+  'op-orders': () => {
+    return `
+      ${statusBar()}
+      ${topBar({ title: 'Zakázky', back: false })}
+      <div class="content"><div class="scroll">
+        <div class="info-box">Zde operátor vidí všechny neskryté zakázky (read-only).</div>
+        ${ORDERS.filter(o => !o.hidden).map(o => `
+          <div class="card" data-act="nav" data-screen="op-station" data-id="${o.id}"
+               style="border-left-color:${deadlineColor(o.due)}">
+            <div class="row">
+              <span class="order-no">#${o.number}</span>
+              ${priorityBadge(o.priority)}
+            </div>
+            <div class="name">${esc(customerName(o.customer))} · ${esc(productById(o.product).code)}</div>
+            <div class="sub-text">${o.quantity} ks · do ${o.due} · ${typeBadge(o.type)}</div>
+          </div>
+        `).join('')}
+      </div></div>
+      ${tabsBottom()}
+    `;
+  },
+
+  'op-notif': () => {
+    const u = state.currentUser;
+    const list = NOTIFICATIONS.filter(n => n.user === u.id).sort((a,b) => b.at - a.at);
+    return `
+      ${statusBar()}
+      ${topBar({ title: 'Notifikace', back: false })}
+      <div class="content"><div class="scroll">
+        <div class="info-box">${list.filter(n => !n.read).length} nepřečtených</div>
+        ${list.map(n => {
+          const col = { high:'#dc2626', normal:'#1d4ed8', low:'#9ca3af' }[n.priority];
+          const ago = Math.round((Date.now() - n.at)/60000);
+          const agoTxt = ago < 60 ? `${ago} min` : ago < 24*60 ? `${Math.round(ago/60)} h` : `${Math.round(ago/60/24)} dní`;
+          return `
+            <div class="card" style="border-left-color:${col}; background:${n.read ? '#fff' : '#eff6ff'};"
+                 data-act="open-notif" data-id="${n.id}">
+              <div class="row">
+                <span class="order-no" style="font-size:13px;">${esc(n.title)}</span>
+                <span class="sub-text">${agoTxt}</span>
+              </div>
+              <div class="name">${esc(n.body)}</div>
+              <div class="row" style="margin-top:6px;">
+                <span class="badge ${n.priority === 'high' ? 'badge-red' : n.priority === 'low' ? 'badge-gray' : 'badge-blue'}">${n.priority}</span>
+                <span>
+                  <button class="btn btn-sm btn-gray" data-act="notif-toggle-prio" data-id="${n.id}" onclick="event.stopPropagation()">priorita ↻</button>
+                  <button class="btn btn-sm btn-gray" data-act="notif-delete" data-id="${n.id}" onclick="event.stopPropagation()">🗑</button>
+                </span>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div></div>
+      ${tabsBottom()}
+    `;
+  },
+
+  profile: () => {
+    const u = state.currentUser;
+    return `
+      ${statusBar()}
+      ${topBar({ title: 'Profil', back: false })}
+      <div class="content"><div class="scroll">
+        <div class="card flat" style="text-align:center; padding:24px;">
+          <div style="font-size:40px;">👤</div>
+          <div style="font-size:18px; font-weight:700; margin-top:8px;">${esc(u.name)}</div>
+          <div class="sub-text">${esc(u.email)}</div>
+          <div class="sub-text" style="margin-top:4px;"><b>Role:</b> ${u.role}</div>
+        </div>
+        ${u.role === 'operator' ? `
+          <div class="section-title">Mé stanoviště</div>
+          <div class="card flat">
+            ${STATIONS.map(st => `
+              <div class="chip ${u.defaultStation === st.id ? 'active' : ''} ${!u.quals.includes(STATION_QUAL[st.id]) ? 'off' : ''}"
+                   data-act="set-station" data-st="${st.id}">${st.id}. ${esc(st.name)}</div>
+            `).join('')}
+          </div>
+          <div class="section-title">Mé kvalifikace</div>
+          <div class="card flat">${u.quals.map(q => `<span class="chip active">${esc(q)}</span>`).join('') || '<div class="sub-text">Žádné</div>'}</div>
+        ` : ''}
+        <div style="height:10px"></div>
+        <button class="btn btn-outline btn-block" data-act="logout">Odhlásit</button>
+      </div></div>
+      ${tabsBottom()}
+    `;
+  },
+
+  // ═══ TPV ══════════════════════════════════════════════════
+  'tpv-products': () => {
+    return `
+      ${statusBar()}
+      ${topBar({ title: 'Produkty', sub: `${PRODUCTS.length} produktů`, back: false, right: `<span class="icon" data-act="toast" data-msg="Nový produkt – zatím neimplementováno">＋</span>` })}
+      <div class="content"><div class="scroll">
+        <div class="info-box">TPV spravuje produkty, knihovnu dokumentů a použitá stanoviště.</div>
+        ${PRODUCTS.map(p => `
+          <div class="card" data-act="nav" data-screen="tpv-product-detail" data-id="${p.id}">
+            <div class="row"><span class="order-no">${esc(p.code)}</span>
+              <span class="sub-text">${p.applicable.length}/12 stanovišť</span></div>
+            <div class="name">${esc(customerName(p.customer))} · ${esc(p.name)}</div>
+            ${p.wave_program ? `<div class="sub-text">🔥 Vlna program: <b>${p.wave_program}</b></div>` : ''}
+          </div>
+        `).join('')}
+      </div></div>
+      ${tabsBottom()}
+    `;
+  },
+
+  'tpv-product-detail': () => {
+    const p = productById(state.route.params.id);
+    return `
+      ${statusBar()}
+      ${topBar({ title: p.code, sub: customerName(p.customer) })}
+      <div class="content"><div class="scroll">
+        <div class="card flat">
+          <div class="form-row"><label class="form-label">Název</label><input class="input" value="${esc(p.name)}" readonly></div>
+          <div class="form-row"><label class="form-label">Kód</label><input class="input" value="${esc(p.code)}" readonly></div>
+          <div class="form-row"><label class="form-label">Program pájení vlnou</label><input class="input" value="${esc(p.wave_program || '')}" readonly></div>
+        </div>
+
+        <div class="section-title">Použitá stanoviště (klikni pro zap/vyp)</div>
+        <div class="info-box">Tahle šablona se použije automaticky při založení nové zakázky produktu ${esc(p.code)}.</div>
+        <div class="st-grid">
+          ${STATIONS.map(st => `
+            <div class="st-tile ${p.applicable.includes(st.id) ? 'done' : 'off'}"
+                 data-act="tpv-toggle-st" data-pid="${p.id}" data-st="${st.id}">
+              <div class="st-name">${st.id}. ${esc(st.name)}</div>
+              <div class="st-meta">${p.applicable.includes(st.id) ? '✓ použito' : '✗ přeskočí'}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div></div>
+      ${tabsBottom()}
+    `;
+  },
+
+  'tpv-lib': () => `
+    ${statusBar()}
+    ${topBar({ title: 'Knihovna dokumentů', back: false })}
+    <div class="content"><div class="scroll">
+      <div class="info-box">Pro každý produkt připojíš sadu dokumentů (BOM, výkres, průvodka). Při opakované zakázce se zkopírují automaticky.</div>
+      ${PRODUCTS.map(p => `
+        <div class="card flat">
+          <div class="order-no">${esc(p.code)}</div>
+          <div class="name">${esc(p.name)}</div>
+          <div class="list-divider"></div>
+          <div class="sub-text">📄 BOM.pdf · 📐 Osazovací výkres.pdf · 📋 Průvodní list.pdf</div>
+          <button class="btn btn-sm btn-outline" style="margin-top:8px;" data-act="toast" data-msg="Nahrávání souboru (mock)">＋ Přidat dokument</button>
+        </div>
+      `).join('')}
+    </div></div>
+    ${tabsBottom()}
+  `,
+
+  'tpv-orders': () => SCREENS['op-orders'](),
+
+  // ═══ DISPEČER ═════════════════════════════════════════════
+  'disp-dash': () => {
+    const active = ORDERS.filter(o => !o.hidden);
+    const overdue = active.filter(o => deadlineColor(o.due) === '#dc2626').length;
+    const issues = active.filter(o => Object.values(o.stations).some(s => s.status === 'issue')).length;
+    return `
+      ${statusBar()}
+      ${topBar({ title: 'Přehled výroby', sub: `${active.length} aktivních zakázek`, back: false })}
+      <div class="content"><div class="scroll">
+        <div class="st-grid">
+          <div class="card flat"><div class="sub-text">Celkem</div><div style="font-size:28px; font-weight:800;">${active.length}</div></div>
+          <div class="card flat"><div class="sub-text">Po termínu</div><div style="font-size:28px; font-weight:800; color:#dc2626;">${overdue}</div></div>
+          <div class="card flat"><div class="sub-text">Problémy</div><div style="font-size:28px; font-weight:800; color:#b45309;">${issues}</div></div>
+          <div class="card flat"><div class="sub-text">Dokončeno dnes</div><div style="font-size:28px; font-weight:800; color:#15803d;">0</div></div>
+        </div>
+        <div class="section-title">Aktivní zakázky</div>
+        ${active.map(o => `
+          <div class="card" data-act="nav" data-screen="disp-order" data-id="${o.id}"
+               style="border-left-color:${deadlineColor(o.due)}">
+            <div class="row">
+              <span class="order-no">#${o.number}</span>
+              ${priorityBadge(o.priority)}
+            </div>
+            <div class="name">${esc(customerName(o.customer))} · ${esc(productById(o.product).code)}</div>
+            <div class="row" style="margin-top:6px;">
+              <span class="sub-text">${o.quantity} ks · do ${o.due}</span>
+              ${typeBadge(o.type)}
+            </div>
+          </div>
+        `).join('')}
+      </div></div>
+      ${tabsBottom()}
+    `;
+  },
+
+  'disp-orders': () => SCREENS['disp-dash'](),
+  'disp-queue': () => SCREENS['op-queue'](),
+
+  'disp-order': () => {
+    const o = ORDERS.find(x => x.id === state.route.params.id);
+    const prod = productById(o.product);
+    return `
+      ${statusBar()}
+      ${topBar({ title: `#${o.number}`, sub: `${esc(customerName(o.customer))} · ${esc(prod.code)}` })}
+      <div class="content"><div class="scroll">
+        <div class="card flat">
+          <div class="row"><b>${esc(o.name)}</b> ${typeBadge(o.type)}</div>
+          <div class="sub-text">${o.quantity} ks · termín ${o.due} · ${priorityBadge(o.priority)}</div>
+          ${prod.wave_program ? `<div class="sub-text" style="margin-top:4px;">🔥 Program vlny: <b>${prod.wave_program}</b></div>` : ''}
+        </div>
+
+        <div class="section-title">Stanoviště (dlouhý stisk = vyp/zap)</div>
+        <div class="st-grid">
+          ${STATIONS.map(st => {
+            const s = o.stations[st.id];
+            const cls = s.applicable === false ? 'off' :
+                        s.status === 'completed' ? 'done' :
+                        s.status === 'in_progress' ? 'prog' :
+                        s.status === 'issue' ? 'issue' : 'wait';
+            const arr = arrivedAt(o, st.id);
+            return `
+              <div class="st-tile ${cls}" data-act="disp-toggle-st" data-id="${o.id}" data-st="${st.id}">
+                <div class="st-name">${st.id}. ${esc(st.name)}</div>
+                <div class="st-meta">
+                  ${s.applicable === false ? '✗ nepoužito' :
+                    s.status === 'completed' ? `✅ ${s.ok} ks` :
+                    s.status === 'in_progress' ? `⏱ ${(s.ok||0)}/${arr} ks` :
+                    s.status === 'issue' ? `⚠️ problém` :
+                    arr > 0 ? `⏸ ${arr} ks čeká` : 'čeká'}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <div class="section-title">Timeline dílčích toků (${o.transfers.length})</div>
+        <div class="card flat">
+          ${o.transfers.length === 0 ? `<div class="sub-text">Ještě nic nepředáno.</div>` :
+            o.transfers.map(t => `
+              <div class="row" style="padding:6px 0; border-bottom:1px solid #f3f4f6;">
+                <span>
+                  <b>${t.qty} ks</b>
+                  <span class="sub-text">${stationName(t.from)} → ${stationName(t.to)}</span>
+                </span>
+                <span class="sub-text">${esc(t.at)} · ${esc(userName(t.by))}</span>
+              </div>
+            `).join('')}
+        </div>
+
+        <div class="section-title">Poznámky</div>
+        ${o.notes.length === 0 ? `<div class="card flat"><div class="sub-text">Žádné.</div></div>` :
+          o.notes.map(n => `<div class="card flat">
+            <div class="sub-text">${esc(n.at)} · ${esc(userName(n.by))}</div>
+            <div class="name">${esc(n.text)}</div>
+          </div>`).join('')}
+      </div></div>
+      ${tabsBottom()}
+    `;
+  },
+
+  'disp-new': () => `
+    ${statusBar()}
+    ${topBar({ title: 'Nová zakázka' })}
+    <div class="content"><div class="scroll">
+      <div class="form-row"><label class="form-label">Číslo zakázky</label><input class="input" id="new-num" value="240120"></div>
+      <div class="form-row"><label class="form-label">Zákazník</label>
+        <select class="input" id="new-cust">${CUSTOMERS.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>
+      </div>
+      <div class="form-row"><label class="form-label">Produkt</label>
+        <select class="input" id="new-prod">${PRODUCTS.map(p => `<option value="${p.id}">${esc(p.code)} — ${esc(p.name)}</option>`).join('')}</select>
+      </div>
+      <div class="form-row"><label class="form-label">Typ výroby</label>
+        <select class="input" id="new-type"><option value="new">Nová</option><option value="repeat" selected>Opakovaná</option><option value="revision">Revize</option></select>
+      </div>
+      <div class="form-row"><label class="form-label">Množství (ks)</label><input class="input" id="new-qty" type="number" value="100"></div>
+      <div class="form-row"><label class="form-label">Termín</label><input class="input" id="new-due" type="date" value="2026-05-10"></div>
+      <div class="form-row"><label class="form-label">Priorita</label>
+        <select class="input" id="new-prio"><option>low</option><option selected>normal</option><option>high</option><option>urgent</option></select>
+      </div>
+      <div class="info-box">Při typu „Opakovaná" se automaticky zkopírují dokumenty z knihovny produktu.</div>
+      <button class="btn btn-block" data-act="new-order-create">Založit zakázku</button>
+    </div></div>
+    ${tabsBottom()}
+  `,
+
+  // ═══ MANAGEMENT ═══════════════════════════════════════════
+  'mgmt-kpi': () => `
+    ${statusBar()}
+    ${topBar({ title: 'KPI – dashboard', back: false })}
+    <div class="content"><div class="scroll">
+      <div class="st-grid">
+        <div class="card flat"><div class="sub-text">OTD (on-time delivery)</div><div style="font-size:28px; font-weight:800; color:#15803d;">92%</div></div>
+        <div class="card flat"><div class="sub-text">FPY (first pass yield)</div><div style="font-size:28px; font-weight:800; color:#1d4ed8;">96.4%</div></div>
+        <div class="card flat"><div class="sub-text">Průměr. doba (den)</div><div style="font-size:28px; font-weight:800;">4.2</div></div>
+        <div class="card flat"><div class="sub-text">Problémy / týden</div><div style="font-size:28px; font-weight:800; color:#b45309;">3</div></div>
+      </div>
+      <div class="section-title">Top zákazníci tento měsíc</div>
+      <div class="card flat">
+        <div class="row" style="padding:4px 0;"><span>Siemens</span><b>1 200 ks</b></div>
+        <div class="row" style="padding:4px 0;"><span>ABB Czech</span><b>50 ks</b></div>
+        <div class="row" style="padding:4px 0;"><span>Škoda Auto</span><b>0 ks</b></div>
+      </div>
+      <div class="section-title">Úzká místa</div>
+      <div class="card flat">
+        <div class="sub-text">AOI – průměrně 8 h čekání na dávku</div>
+        <div class="sub-text">Pájení vlnou – zatěžující v pondělí ráno</div>
+      </div>
+      <button class="btn btn-outline btn-block" data-act="toast" data-msg="PDF report generován (mock)">📄 Export do PDF</button>
+    </div></div>
+    ${tabsBottom()}
+  `,
+  'mgmt-orders': () => SCREENS['disp-dash'](),
+  'mgmt-reports': () => `
+    ${statusBar()}
+    ${topBar({ title: 'Reporty', back: false })}
+    <div class="content"><div class="scroll">
+      <div class="card" data-act="toast" data-msg="PDF: Měsíční souhrn"><b>📄 Měsíční souhrn</b><div class="sub-text">Duben 2026</div></div>
+      <div class="card" data-act="toast" data-msg="PDF: OTD analýza"><b>📈 OTD analýza</b><div class="sub-text">12 měsíců</div></div>
+      <div class="card" data-act="toast" data-msg="PDF: Výkaz stanovišť"><b>🏭 Výkaz stanovišť</b><div class="sub-text">Průchody, doby, problémy</div></div>
+      <div class="card" data-act="toast" data-msg="CSV: Audit log"><b>📜 Audit log CSV</b><div class="sub-text">Všechny změny za období</div></div>
+    </div></div>
+    ${tabsBottom()}
+  `,
+
+  // ═══ ADMIN ════════════════════════════════════════════════
+  'adm-users': () => `
+    ${statusBar()}
+    ${topBar({ title: 'Uživatelé', sub: `${ALL_USERS.length} lidí`, back: false, right: `<span class="icon" data-act="toast" data-msg="Nový uživatel – nejde v mock">＋</span>` })}
+    <div class="content"><div class="scroll">
+      <div class="info-box">Admin upravuje role i kvalifikace. Kvalifikace řídí, na jaká stanoviště operátor smí.</div>
+      ${ALL_USERS.map(u => `
+        <div class="card" data-act="nav" data-screen="adm-user-detail" data-id="${u.id}">
+          <div class="row"><b>${esc(u.name)}</b><span class="badge badge-blue">${u.role}</span></div>
+          <div class="sub-text">${u.quals.length} kvalifikací${u.quals.length ? ': ' + u.quals.join(', ') : ''}</div>
+        </div>
+      `).join('')}
+    </div></div>
+    ${tabsBottom()}
+  `,
+
+  'adm-user-detail': () => {
+    const u = ALL_USERS.find(x => x.id === state.route.params.id);
+    return `
+      ${statusBar()}
+      ${topBar({ title: u.name, sub: u.role })}
+      <div class="content"><div class="scroll">
+        <div class="section-title">Role</div>
+        <div class="card flat">
+          ${['operator','tpv','dispatcher','management','admin'].map(r => `
+            <div class="chip ${u.role === r ? 'active' : ''}" data-act="adm-set-role" data-id="${u.id}" data-role="${r}">${r}</div>
+          `).join('')}
+        </div>
+        <div class="section-title">Kvalifikace (klikni pro zap/vyp)</div>
+        <div class="card flat">
+          ${QUALS.map(q => `
+            <div class="chip ${u.quals.includes(q) ? 'active' : ''}" data-act="adm-toggle-qual" data-id="${u.id}" data-q="${q}">${q}</div>
+          `).join('')}
+        </div>
+        <div style="height:10px"></div>
+        <button class="btn btn-danger btn-block" data-act="toast" data-msg="Smazání uživatele – jen v produkční verzi">🗑 Smazat uživatele</button>
+      </div></div>
+      ${tabsBottom()}
+    `;
+  },
+
+  'adm-audit': () => `
+    ${statusBar()}
+    ${topBar({ title: 'Audit log', back: false })}
+    <div class="content"><div class="scroll">
+      <div class="info-box">Každá změna (stav stanoviště, předání, úprava BOM) se loguje.</div>
+      <div class="card flat">
+        <div class="sub-text">před 2 min · Jan Novák</div>
+        <div class="name">AOI → spustil práci na #240118</div>
+      </div>
+      <div class="card flat">
+        <div class="sub-text">před 25 min · Petr Krause</div>
+        <div class="name">Automat 1 → předal 200 ks na AOI (#240118)</div>
+      </div>
+      <div class="card flat">
+        <div class="sub-text">před 1 h · Eva Svobodová</div>
+        <div class="name">TPV → změnila použitá stanoviště produktu PCB-A-001</div>
+      </div>
+      <div class="card flat">
+        <div class="sub-text">před 2 h · Eva Svobodová</div>
+        <div class="name">Nahlásila problém #240115 na AOI</div>
+      </div>
+    </div></div>
+    ${tabsBottom()}
+  `,
+};
+
+// ═══════════════════════════════════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════════════════════════════════
+
+const ACTIONS = {
+  back: () => back(),
+  nav: (el) => navigate(el.dataset.screen, { id: el.dataset.id }),
+  toast: (el) => showToast(el.dataset.msg || 'OK'),
+  logout: () => { state.loggedIn = false; state.currentUser = null; navigate('login'); },
+
+  login: () => {
+    const roleKey = document.querySelector('.role-btn.active').dataset.role;
+    state.currentUser = { ...USERS[roleKey] };
+    state.loggedIn = true;
+    navigate(HOMES[roleKey]);
+  },
+
+  start: (el) => {
+    const o = ORDERS.find(x => x.id === el.dataset.id);
+    const s = o.stations[+el.dataset.st];
+    s.status = 'in_progress';
+    s.started_at = Date.now();
+    showToast('▶️ Spuštěno, timer běží');
+    render();
+  },
+
+  count: (el) => {
+    const o = ORDERS.find(x => x.id === el.dataset.id);
+    const s = o.stations[+el.dataset.st];
+    const f = el.dataset.field;
+    const d = +el.dataset.delta;
+    s[f] = Math.max(0, (s[f] || 0) + d);
+    render();
+  },
+  'count-input': (el) => {
+    const o = ORDERS.find(x => x.id === el.dataset.id);
+    const s = o.stations[+el.dataset.st];
+    const v = Math.max(0, parseInt(el.value) || 0);
+    s[el.dataset.field] = v;
+  },
+
+  'open-transfer': (el) => {
+    const o = ORDERS.find(x => x.id === el.dataset.id);
+    const stId = +el.dataset.st;
+    const s = o.stations[stId];
+    const next = nextApplicable(o, stId);
+    const done = s.ok;
+    const already = forwardedFrom(o, stId);
+    const remaining = done - already;
+    if (remaining <= 0) { showToast('Nemáš žádné nové OK kusy k předání.'); return; }
+    if (!next) { showToast('Žádné další stanoviště – tohle je poslední.'); return; }
+    openModal('transfer', { orderId: o.id, from: stId, to: next, max: remaining });
+  },
+
+  'do-transfer': () => {
+    const { orderId, from, to } = state.modal.props;
+    const qty = +document.getElementById('t-qty').value;
+    if (qty <= 0) { showToast('Zadej kladný počet'); return; }
+    const o = ORDERS.find(x => x.id === orderId);
+    o.transfers.push({
+      from, to, qty,
+      at: new Date().toISOString().slice(0,16).replace('T',' '),
+      by: state.currentUser.id,
+    });
+    // if all done and forwarded -> station completed
+    const s = o.stations[from];
+    const fwd = forwardedFrom(o, from);
+    if (fwd >= (arrivedAt(o, from) || o.quantity) && s.ok >= fwd) {
+      s.status = 'completed';
+    }
+    // add notification to operator of target station
+    NOTIFICATIONS.unshift({
+      id: 'n' + Date.now(),
+      user: 'u1', // all operators; simplified
+      title: `Přišla dávka z ${stationName(from)}`,
+      body: `${qty} ks na ${stationName(to)} – zakázka #${o.number}`,
+      type:'transfer', priority:'normal', read:false, order: o.id, at: Date.now(),
+    });
+    closeModal();
+    showToast(`✅ Předáno ${qty} ks na ${stationName(to)}`);
+  },
+
+  'report-issue': (el) => {
+    const o = ORDERS.find(x => x.id === el.dataset.id);
+    const s = o.stations[+el.dataset.st];
+    openModal('issue', { orderId: o.id, st: +el.dataset.st });
+  },
+  'do-report-issue': () => {
+    const { orderId, st } = state.modal.props;
+    const txt = document.getElementById('i-txt').value.trim();
+    if (!txt) { showToast('Popiš problém'); return; }
+    const o = ORDERS.find(x => x.id === orderId);
+    o.stations[st].status = 'issue';
+    o.stations[st].issue_note = txt;
+    o.notes.unshift({ at: new Date().toISOString().slice(0,16).replace('T',' '), by: state.currentUser.id, text: `⚠️ ${stationName(st)}: ${txt}` });
+    NOTIFICATIONS.unshift({
+      id: 'n' + Date.now(), user: 'u3' /* dispatcher */,
+      title: `Problém #${o.number}`,
+      body: `${stationName(st)}: ${txt}`,
+      type:'issue', priority:'high', read:false, order: o.id, at: Date.now(),
+    });
+    closeModal();
+    showToast('⚠️ Nahlášeno');
+  },
+
+  pause: (el) => {
+    const o = ORDERS.find(x => x.id === el.dataset.id);
+    const s = o.stations[+el.dataset.st];
+    s.status = 'waiting';
+    delete s.started_at;
+    showToast('⏸ Pozastaveno');
+    render();
+  },
+
+  'open-notif': (el) => {
+    const n = NOTIFICATIONS.find(x => x.id === el.dataset.id);
+    n.read = true;
+    if (n.order) navigate('op-station', { id: n.order });
+    else render();
+  },
+  'notif-toggle-prio': (el) => {
+    const n = NOTIFICATIONS.find(x => x.id === el.dataset.id);
+    n.priority = { low:'normal', normal:'high', high:'low' }[n.priority];
+    render();
+  },
+  'notif-delete': (el) => {
+    NOTIFICATIONS = NOTIFICATIONS.filter(x => x.id !== el.dataset.id);
+    render();
+  },
+
+  'set-station': (el) => {
+    const st = +el.dataset.st;
+    const req = STATION_QUAL[st];
+    if (!state.currentUser.quals.includes(req)) {
+      showToast(`⛔ Nemáš kvalifikaci: ${req}`);
+      return;
+    }
+    state.currentUser.defaultStation = st;
+    showToast(`Mé stanoviště → ${stationName(st)}`);
+    render();
+  },
+
+  'tpv-toggle-st': (el) => {
+    const p = productById(el.dataset.pid);
+    const st = +el.dataset.st;
+    if (p.applicable.includes(st)) p.applicable = p.applicable.filter(x => x !== st);
+    else { p.applicable.push(st); p.applicable.sort((a,b) => a-b); }
+    render();
+  },
+
+  'disp-toggle-st': (el) => {
+    if (state.currentUser.role !== 'dispatcher' && state.currentUser.role !== 'admin') {
+      navigate('op-station', { id: el.dataset.id, stationId: +el.dataset.st });
+      return;
+    }
+    const o = ORDERS.find(x => x.id === el.dataset.id);
+    const st = +el.dataset.st;
+    const s = o.stations[st];
+    if (s.applicable === false) {
+      s.applicable = true; s.status = 'waiting'; s.ok = s.ok||0; s.rework = s.rework||0; s.scrap = s.scrap||0;
+      showToast(`${stationName(st)} zapnuto`);
+    } else {
+      s.applicable = false; showToast(`${stationName(st)} vypnuto`);
+    }
+    render();
+  },
+
+  'new-order-create': () => {
+    const num = document.getElementById('new-num').value;
+    const cust = document.getElementById('new-cust').value;
+    const prodId = document.getElementById('new-prod').value;
+    const type = document.getElementById('new-type').value;
+    const qty = +document.getElementById('new-qty').value;
+    const due = document.getElementById('new-due').value;
+    const prio = document.getElementById('new-prio').value;
+    const prod = productById(prodId);
+    const stations = {};
+    for (let i = 1; i <= 12; i++) {
+      stations[i] = prod.applicable.includes(i)
+        ? { status: 'waiting', ok: 0, rework: 0, scrap: 0 }
+        : { status: 'waiting', applicable: false };
+    }
+    const id = 'o' + Date.now();
+    ORDERS.unshift({
+      id, number: num, customer: cust, product: prodId, name: prod.name,
+      type, quantity: qty, priority: prio, due, created: '2026-04-24', hidden: false,
+      stations, transfers: [], notes: [],
+    });
+    showToast(`✅ Zakázka #${num} založena${type==='repeat' ? ' (dokumenty zkopírovány)' : ''}`);
+    navigate('disp-order', { id });
+  },
+
+  'adm-set-role': (el) => {
+    const u = ALL_USERS.find(x => x.id === el.dataset.id);
+    u.role = el.dataset.role;
+    showToast(`Role → ${u.role}`);
+    render();
+  },
+  'adm-toggle-qual': (el) => {
+    const u = ALL_USERS.find(x => x.id === el.dataset.id);
+    const q = el.dataset.q;
+    if (u.quals.includes(q)) u.quals = u.quals.filter(x => x !== q);
+    else u.quals.push(q);
+    render();
+  },
+
+  'close-modal': () => closeModal(),
+};
+
+// ═══════════════════════════════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════════════════════════════
+
+function renderModal() {
+  if (!state.modal) return '';
+  const m = state.modal;
+  if (m.type === 'transfer') {
+    return `<div class="modal-bg">
+      <div class="modal">
+        <h3>Předat dávku</h3>
+        <div class="sub-text">${stationName(m.props.from)} → ${stationName(m.props.to)}</div>
+        <div class="sub-text" style="margin:8px 0;">K předání dostupných: <b>${m.props.max} ks</b></div>
+        <input id="t-qty" class="input" type="number" value="${m.props.max}" min="1" max="${m.props.max}">
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <button class="btn btn-gray" data-act="close-modal">Zrušit</button>
+          <button class="btn btn-green btn-block" data-act="do-transfer">Předat</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  if (m.type === 'issue') {
+    return `<div class="modal-bg">
+      <div class="modal">
+        <h3>⚠️ Nahlásit problém</h3>
+        <div class="sub-text" style="margin:8px 0;">Stanoviště: ${stationName(m.props.st)}</div>
+        <textarea id="i-txt" class="input" rows="4" placeholder="Popis problému..."></textarea>
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <button class="btn btn-gray" data-act="close-modal">Zrušit</button>
+          <button class="btn btn-danger btn-block" data-act="do-report-issue">Nahlásit</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  return '';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════
+
+function render() {
+  const fn = SCREENS[state.route.screen] || SCREENS.login;
+  const host = document.getElementById('screen');
+  let html = fn();
+  html += renderModal();
+  if (state.toast) html += `<div class="toast show">${esc(state.toast)}</div>`;
+  host.innerHTML = html;
+
+  // wire clicks
+  host.querySelectorAll('[data-act]').forEach(el => {
+    const act = el.dataset.act;
+    if (act === 'count-input') {
+      el.addEventListener('input', () => ACTIONS[act](el));
+    } else {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (ACTIONS[act]) ACTIONS[act](el);
+      });
+    }
+  });
+}
+
+// Role picker: switching role before login just changes which account will log in.
+// After login: switching role logs out and re-logs as the new role.
+document.querySelectorAll('.role-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (state.loggedIn) {
+      state.currentUser = { ...USERS[btn.dataset.role] };
+      navigate(HOMES[btn.dataset.role]);
+    } else {
+      render();
+    }
+  });
+});
+
+render();
+</script>
+</body>
+</html>

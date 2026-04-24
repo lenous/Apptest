@@ -1,0 +1,1655 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Výroba – Náhled v3 (kompletní)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 20px; gap: 40px; flex-wrap: wrap;
+  }
+  .device-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .device-label { color: #fff; font-weight: 600; font-size: 13px; opacity: 0.9; }
+  .phone {
+    width: 390px; height: 844px;
+    background: #000; border-radius: 50px; padding: 12px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.4), inset 0 0 0 2px #222;
+    position: relative; flex-shrink: 0;
+  }
+  .phone::before {
+    content: ''; position: absolute; top: 22px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 30px; background: #000; border-radius: 20px; z-index: 10;
+  }
+  .screen {
+    width: 100%; height: 100%; background: #f3f4f6; border-radius: 38px;
+    overflow: hidden; position: relative; display: flex; flex-direction: column;
+  }
+  .status-bar {
+    height: 48px; display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 0 28px 8px; font-size: 15px; font-weight: 600;
+    flex-shrink: 0; background: #1a56db; color: #fff;
+  }
+  .offline-bar {
+    background: #f59e0b; color: #78350f; font-size: 11px; font-weight: 600;
+    padding: 3px 0; text-align: center; display: flex; align-items: center;
+    justify-content: center; gap: 6px;
+  }
+  .nav-header {
+    background: #1a56db; color: #fff; padding: 4px 16px 12px;
+    display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+  }
+  .nav-header .back { cursor: pointer; font-size: 20px; }
+  .nav-header .title { font-size: 17px; font-weight: 700; flex: 1; }
+  .nav-header .action { font-size: 18px; font-weight: 600; cursor: pointer; position: relative; }
+  .badge-dot {
+    position: absolute; top: -4px; right: -4px;
+    background: #ef4444; color: #fff; font-size: 10px; font-weight: 700;
+    border-radius: 10px; padding: 1px 5px; min-width: 16px; text-align: center;
+  }
+  .content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .content::-webkit-scrollbar { width: 3px; }
+  .content::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+
+  .tab-bar {
+    background: #fff; border-top: 1px solid #e5e7eb;
+    display: flex; padding: 6px 0 24px; flex-shrink: 0;
+  }
+  .tab-bar .tab {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    padding: 6px; gap: 2px; color: #6b7280; cursor: pointer; font-size: 10px;
+  }
+  .tab.active { color: #1a56db; }
+  .tab .icon { font-size: 22px; }
+
+  /* PIN login */
+  .pin-screen {
+    flex: 1; background: linear-gradient(180deg, #1a56db 0%, #1e3a8a 100%);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 40px 24px; color: #fff;
+  }
+  .pin-title { font-size: 26px; font-weight: 800; }
+  .pin-sub { font-size: 13px; opacity: 0.8; margin-bottom: 32px; }
+  .pin-user { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.15); padding: 10px 16px; border-radius: 30px; margin-bottom: 24px; }
+  .pin-avatar { width: 36px; height: 36px; border-radius: 50%; background: #fff; color: #1a56db; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .pin-dots { display: flex; gap: 16px; margin-bottom: 32px; }
+  .pin-dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #fff; }
+  .pin-dot.filled { background: #fff; }
+  .pin-keypad { display: grid; grid-template-columns: repeat(3, 72px); gap: 12px; }
+  .pin-key {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: rgba(255,255,255,0.2); border: none; color: #fff;
+    font-size: 26px; font-weight: 600; cursor: pointer;
+  }
+  .pin-key:hover { background: rgba(255,255,255,0.3); }
+  .pin-key.special { background: transparent; font-size: 20px; }
+
+  /* Inputs */
+  .input {
+    width: 100%; border: 1px solid #d1d5db; border-radius: 8px;
+    padding: 10px 12px; font-size: 14px; background: #f9fafb; color: #111827;
+  }
+  .btn-primary {
+    width: 100%; background: #1a56db; color: #fff; border: none;
+    border-radius: 8px; padding: 13px; font-size: 15px; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .btn-outline {
+    background: #fff; border: 1.5px solid; border-radius: 8px;
+    padding: 10px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+
+  /* Search bar */
+  .search-row {
+    margin: 10px 16px; background: #fff; border-radius: 10px;
+    padding: 8px 12px; display: flex; align-items: center; gap: 8px;
+    border: 1px solid #e5e7eb;
+  }
+  .search-row input { flex: 1; border: none; background: transparent; font-size: 14px; outline: none; }
+  .search-qr {
+    background: #1a56db; color: #fff; border-radius: 6px;
+    padding: 5px 8px; font-size: 14px; cursor: pointer;
+  }
+  .filter-bar { display: flex; gap: 6px; padding: 0 16px 8px; overflow-x: auto; }
+  .filter-chip {
+    border: 1px solid #d1d5db; background: #fff;
+    border-radius: 16px; padding: 5px 11px; font-size: 12px; cursor: pointer;
+    white-space: nowrap; color: #374151; font-weight: 500;
+  }
+  .filter-chip.active { background: #1a56db; color: #fff; border-color: #1a56db; }
+
+  /* Stats strip */
+  .stats-strip {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+    margin: 8px 16px;
+  }
+  .stat-item {
+    background: #fff; border-radius: 10px; padding: 8px; text-align: center;
+  }
+  .stat-value { font-size: 18px; font-weight: 800; color: #111827; }
+  .stat-label { font-size: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.3px; }
+  .stat-urgent { color: #b91c1c; }
+  .stat-good { color: #15803d; }
+  .stat-warn { color: #d97706; }
+
+  /* Dashboard */
+  .dash-header { padding: 6px 16px 4px; display: flex; justify-content: space-between; align-items: baseline; }
+  .dash-title { font-size: 17px; font-weight: 700; color: #111827; }
+  .dash-sub { font-size: 12px; color: #6b7280; }
+
+  .order-card {
+    margin: 0 16px 10px; background: #fff; border-radius: 12px; padding: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07); cursor: pointer; position: relative;
+  }
+  .order-card.overdue { border-left: 4px solid #b91c1c; }
+  .order-card.due-soon { border-left: 4px solid #d97706; }
+  .order-card.due-ok { border-left: 4px solid #15803d; }
+  .order-card.issue { border-left: 4px solid #ef4444; }
+  .order-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+  .oc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .oc-num {
+    font-size: 16px; font-weight: 800; color: #1a56db;
+    font-family: "SF Mono", Menlo, monospace; letter-spacing: 0.5px;
+  }
+  .oc-customer { font-size: 13px; font-weight: 600; color: #111827; margin-top: 1px; }
+  .oc-product { font-size: 12px; color: #6b7280; margin-top: 1px; }
+  .oc-qty { font-size: 11px; color: #6b7280; margin-top: 2px; }
+  .badges-row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+  .prio-badge { border-radius: 6px; padding: 2px 7px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .prio-high { background: #fef3c7; color: #d97706; }
+  .prio-urgent { background: #fee2e2; color: #b91c1c; }
+  .prio-normal { background: #dbeafe; color: #1d4ed8; }
+  .type-badge {
+    border-radius: 6px; padding: 2px 7px; font-size: 10px; font-weight: 600;
+    border: 1px solid;
+  }
+  .type-new { border-color: #15803d; color: #15803d; background: #f0fdf4; }
+  .type-repeat { border-color: #6b7280; color: #6b7280; background: #f9fafb; }
+  .type-revision { border-color: #d97706; color: #d97706; background: #fffbeb; }
+
+  .progress-row { display: flex; align-items: center; margin: 8px 0 6px; gap: 8px; }
+  .progress-bar { flex: 1; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #1a56db; border-radius: 3px; }
+  .progress-fill.done { background: #15803d; }
+  .progress-text { font-size: 11px; color: #6b7280; width: 34px; text-align: right; font-weight: 600; }
+  .active-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    border-radius: 6px; padding: 3px 7px; font-size: 11px; font-weight: 500;
+  }
+  .s-waiting { background: #f3f4f6; color: #6b7280; }
+  .s-progress { background: #dbeafe; color: #1d4ed8; }
+  .s-completed { background: #dcfce7; color: #15803d; }
+  .s-issue { background: #fee2e2; color: #b91c1c; }
+
+  .due-row {
+    font-size: 11px; color: #6b7280; margin-top: 6px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .due-row .overdue { color: #b91c1c; font-weight: 700; }
+  .due-row .warn { color: #d97706; font-weight: 600; }
+  .deadline-pill {
+    border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: 700;
+  }
+  .dp-red { background: #fee2e2; color: #b91c1c; }
+  .dp-orange { background: #fef3c7; color: #d97706; }
+  .dp-green { background: #dcfce7; color: #15803d; }
+
+  .fab {
+    position: absolute; bottom: 90px; right: 20px;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #1a56db; color: #fff; font-size: 28px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; box-shadow: 0 4px 12px rgba(26,86,219,0.4); z-index: 5;
+  }
+  .fab-qr {
+    position: absolute; bottom: 90px; left: 20px;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #111827; color: #fff; font-size: 24px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 5;
+  }
+
+  /* My station */
+  .mystation-header {
+    background: linear-gradient(135deg, #1a56db, #1e40af);
+    color: #fff; padding: 14px 16px; border-bottom: 1px solid #e5e7eb;
+  }
+  .ms-title { font-size: 12px; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px; }
+  .ms-station { font-size: 22px; font-weight: 800; margin-top: 2px; }
+  .ms-queue { font-size: 12px; opacity: 0.9; margin-top: 4px; }
+  .ms-section-title {
+    padding: 14px 16px 6px; font-size: 11px; font-weight: 700; color: #6b7280;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    display: flex; justify-content: space-between;
+  }
+
+  /* Order detail */
+  .order-header-card { background: #fff; padding: 14px 16px; border-bottom: 1px solid #e5e7eb; }
+  .order-header-card .oc-num { font-size: 20px; }
+  .meta-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px;
+  }
+  .meta-item { background: #f3f4f6; border-radius: 8px; padding: 6px 10px; }
+  .meta-item-label { font-size: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.3px; }
+  .meta-item-value { font-size: 13px; color: #111827; font-weight: 600; margin-top: 1px; }
+
+  .tabs-row { display: flex; background: #fff; border-bottom: 1px solid #e5e7eb; overflow-x: auto; }
+  .tab-btn {
+    flex-shrink: 0; padding: 11px 14px; text-align: center; font-size: 12px; color: #6b7280;
+    font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent;
+  }
+  .tab-btn.active { color: #1a56db; border-bottom-color: #1a56db; font-weight: 700; }
+
+  /* Stations timeline */
+  .station-row { display: flex; margin: 0 16px; cursor: pointer; }
+  .timeline-col { width: 22px; display: flex; flex-direction: column; align-items: center; padding-top: 14px; }
+  .timeline-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .timeline-line { flex: 1; width: 2px; background: #e5e7eb; margin: 2px 0 -4px; min-height: 12px; }
+  .station-card {
+    flex: 1; background: #fff; border-radius: 10px; padding: 10px 12px;
+    margin: 0 0 8px 8px; border-left: 3px solid #e5e7eb;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  }
+  .sc-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .sc-name { font-size: 13px; font-weight: 600; color: #111827; }
+  .sc-detail { font-size: 11px; color: #6b7280; margin-top: 3px; }
+  .sc-duration { font-size: 10px; color: #9ca3af; margin-top: 2px; font-style: italic; }
+
+  /* Station detail + checklist */
+  .section { padding: 12px 16px; }
+  .section-title {
+    font-size: 11px; font-weight: 700; color: #6b7280;
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+  }
+  .status-card-big {
+    background: #fff; border-radius: 12px; padding: 14px; margin: 14px 16px 0;
+    border-left: 4px solid #1d4ed8;
+  }
+  .timer-card {
+    background: #eff6ff; border-radius: 10px; padding: 10px 14px; margin: 8px 16px 0;
+    display: flex; align-items: center; gap: 10px; border: 1px solid #bfdbfe;
+  }
+  .timer-icon { font-size: 24px; }
+  .timer-value { font-size: 18px; font-weight: 800; color: #1a56db; font-family: "SF Mono", Menlo, monospace; }
+  .timer-label { font-size: 11px; color: #6b7280; }
+
+  .checklist { background: #fff; border-radius: 12px; padding: 8px; margin: 0 16px; }
+  .checklist-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px;
+    border-bottom: 1px solid #f3f4f6; cursor: pointer;
+  }
+  .checklist-item:last-child { border-bottom: none; }
+  .checkbox {
+    width: 22px; height: 22px; border-radius: 6px; border: 2px solid #d1d5db;
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700;
+  }
+  .checkbox.checked { background: #15803d; border-color: #15803d; color: #fff; }
+  .checklist-item.done .cl-text { text-decoration: line-through; color: #9ca3af; }
+  .cl-text { font-size: 13px; color: #111827; }
+
+  /* Scrap tracking */
+  .scrap-card { background: #fff; border-radius: 12px; padding: 12px; margin: 0 16px; }
+  .scrap-row {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 8px;
+  }
+  .scrap-item { text-align: center; background: #f9fafb; border-radius: 8px; padding: 8px; }
+  .scrap-item.ok { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .scrap-item.rework { background: #fffbeb; border: 1px solid #fde68a; }
+  .scrap-item.scrap { background: #fef2f2; border: 1px solid #fecaca; }
+  .scrap-label { font-size: 10px; color: #6b7280; text-transform: uppercase; }
+  .scrap-value { font-size: 18px; font-weight: 800; margin-top: 2px; }
+  .scrap-value.ok { color: #15803d; }
+  .scrap-value.rework { color: #d97706; }
+  .scrap-value.scrap { color: #b91c1c; }
+
+  .action-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  /* Note form with photo/voice */
+  .note-form { background: #fff; border-radius: 12px; padding: 12px; margin: 0 16px 10px; }
+  .note-form textarea {
+    width: 100%; border: 1px solid #d1d5db; border-radius: 8px;
+    padding: 10px; font-size: 13px; resize: none; min-height: 64px; font-family: inherit;
+    background: #f9fafb;
+  }
+  .attach-row {
+    display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;
+  }
+  .attach-btn {
+    background: #f3f4f6; border: none; border-radius: 8px;
+    padding: 8px 12px; font-size: 12px; cursor: pointer; color: #374151;
+    display: flex; align-items: center; gap: 5px; font-weight: 500;
+  }
+  .attach-btn.recording { background: #fee2e2; color: #b91c1c; }
+  .photo-preview-row {
+    display: flex; gap: 6px; margin-top: 8px;
+  }
+  .photo-preview {
+    width: 56px; height: 56px; border-radius: 8px;
+    background: linear-gradient(135deg, #fde68a, #f59e0b);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; position: relative;
+  }
+  .photo-preview .remove {
+    position: absolute; top: -4px; right: -4px;
+    width: 18px; height: 18px; background: #111827; color: #fff;
+    border-radius: 50%; font-size: 11px; display: flex; align-items: center; justify-content: center;
+  }
+
+  .note-card {
+    background: #fff; border-radius: 10px; padding: 10px 12px;
+    margin: 0 16px 6px; font-size: 13px;
+  }
+  .note-header { display: flex; gap: 6px; margin-bottom: 4px; align-items: center; }
+  .note-type-badge { border-radius: 5px; padding: 2px 6px; font-size: 10px; font-weight: 600; }
+  .nt-note { background: #dbeafe; color: #1d4ed8; }
+  .nt-change { background: #fef3c7; color: #d97706; }
+  .nt-issue { background: #fee2e2; color: #b91c1c; }
+  .note-content { color: #374151; line-height: 1.4; font-size: 13px; }
+  .note-photo {
+    width: 100%; height: 140px; border-radius: 8px; margin-top: 6px;
+    background: linear-gradient(135deg, #cbd5e1, #64748b);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 36px;
+  }
+  .note-meta { font-size: 10px; color: #9ca3af; margin-top: 4px; }
+
+  /* Warehouse / BOM */
+  .warehouse-head {
+    background: #fff; padding: 14px 16px; border-bottom: 1px solid #e5e7eb;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .wh-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: #dcfce7; color: #15803d; display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .wh-icon.warn { background: #fef3c7; color: #d97706; }
+  .wh-title { font-size: 16px; font-weight: 700; }
+  .wh-sub { font-size: 12px; color: #6b7280; margin-top: 2px; }
+
+  .bom-item {
+    display: flex; align-items: center; gap: 10px;
+    background: #fff; margin: 0 16px 6px; padding: 10px 12px; border-radius: 10px;
+  }
+  .bom-check {
+    width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  .bom-check.ok { background: #dcfce7; color: #15803d; }
+  .bom-check.missing { background: #fee2e2; color: #b91c1c; }
+  .bom-check.partial { background: #fef3c7; color: #d97706; }
+  .bom-name { font-size: 13px; font-weight: 600; color: #111827; }
+  .bom-qty { font-size: 11px; color: #6b7280; margin-top: 1px; }
+  .bom-status { font-size: 11px; font-weight: 600; margin-left: auto; }
+  .bom-status.ok { color: #15803d; }
+  .bom-status.missing { color: #b91c1c; }
+
+  /* QR scanner */
+  .qr-screen {
+    flex: 1; background: #000; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; color: #fff; position: relative;
+  }
+  .qr-viewfinder {
+    width: 260px; height: 260px; border-radius: 20px; position: relative;
+    background: linear-gradient(135deg, #1f2937, #111827);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .qr-corners { position: absolute; inset: 0; }
+  .qr-corner {
+    position: absolute; width: 30px; height: 30px;
+    border: 4px solid #1a56db;
+  }
+  .qr-corner.tl { top: 0; left: 0; border-right: none; border-bottom: none; border-top-left-radius: 20px; }
+  .qr-corner.tr { top: 0; right: 0; border-left: none; border-bottom: none; border-top-right-radius: 20px; }
+  .qr-corner.bl { bottom: 0; left: 0; border-right: none; border-top: none; border-bottom-left-radius: 20px; }
+  .qr-corner.br { bottom: 0; right: 0; border-left: none; border-top: none; border-bottom-right-radius: 20px; }
+  .qr-line {
+    width: 220px; height: 2px; background: #1a56db;
+    box-shadow: 0 0 10px #1a56db; animation: qrscan 2s infinite;
+  }
+  @keyframes qrscan {
+    0%, 100% { transform: translateY(-110px); }
+    50% { transform: translateY(110px); }
+  }
+  .qr-hint { margin-top: 24px; text-align: center; padding: 0 30px; }
+  .qr-hint-title { font-size: 16px; font-weight: 700; }
+  .qr-hint-text { font-size: 13px; opacity: 0.7; margin-top: 4px; }
+
+  /* New order */
+  .form-section { margin: 12px 16px; }
+  .form-label { font-size: 12px; color: #374151; font-weight: 600; margin-bottom: 4px; display: block; }
+  .form-label .req { color: #b91c1c; }
+  .form-card { background: #fff; border-radius: 12px; padding: 12px; }
+  .form-row { margin-bottom: 12px; }
+  .form-row:last-child { margin-bottom: 0; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+  .chip {
+    border: 1px solid #d1d5db; border-radius: 16px;
+    padding: 5px 11px; font-size: 12px; color: #374151; background: #fff;
+    cursor: pointer; font-weight: 500;
+  }
+  .chip.selected { background: #1a56db; color: #fff; border-color: #1a56db; }
+
+  /* Info boxes */
+  .info-box {
+    background: #eff6ff; border-left: 3px solid #1a56db; border-radius: 6px;
+    padding: 10px 12px; margin: 12px 16px; font-size: 12px; color: #1e40af;
+    display: flex; gap: 8px; align-items: flex-start;
+  }
+  .info-box.warn { background: #fffbeb; border-color: #d97706; color: #92400e; }
+  .info-box.success { background: #f0fdf4; border-color: #15803d; color: #14532d; }
+  .info-box.danger { background: #fef2f2; border-color: #b91c1c; color: #7f1d1d; }
+  .info-box-icon { font-size: 16px; }
+  .info-box-title { font-weight: 700; margin-bottom: 2px; }
+
+  /* Documents */
+  .upload-btn-row {
+    margin: 12px 16px; background: #eff6ff; border: 1px dashed #bfdbfe;
+    border-radius: 10px; padding: 11px; display: flex; align-items: center;
+    justify-content: center; gap: 8px; color: #1a56db; font-weight: 600;
+    font-size: 13px; cursor: pointer;
+  }
+  .doc-row {
+    display: flex; align-items: center; margin: 0 16px 8px;
+    background: #fff; border-radius: 10px; padding: 10px 12px; gap: 10px; cursor: pointer;
+  }
+  .doc-row.auto-loaded { border-left: 3px solid #15803d; }
+  .doc-icon {
+    width: 38px; height: 38px; border-radius: 8px;
+    background: #eff6ff; display: flex; align-items: center; justify-content: center;
+    color: #1d4ed8; font-size: 18px;
+  }
+  .doc-name { font-size: 13px; font-weight: 600; color: #111827; }
+  .doc-meta { font-size: 10px; color: #9ca3af; margin-top: 2px; }
+  .doc-badge {
+    font-size: 9px; background: #dcfce7; color: #15803d;
+    border-radius: 4px; padding: 1px 5px; font-weight: 600; margin-left: 4px;
+  }
+
+  /* KPI dashboard */
+  .kpi-big { background: #fff; border-radius: 12px; padding: 14px; margin: 10px 16px; }
+  .kpi-big-title { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+  .kpi-big-value { font-size: 32px; font-weight: 800; margin-top: 4px; color: #111827; }
+  .kpi-big-trend { font-size: 12px; margin-top: 4px; }
+  .kpi-big-trend.up { color: #15803d; }
+  .kpi-big-trend.down { color: #b91c1c; }
+  .kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 16px 10px; }
+  .kpi-small { background: #fff; border-radius: 12px; padding: 12px; }
+  .kpi-small-label { font-size: 11px; color: #6b7280; }
+  .kpi-small-value { font-size: 22px; font-weight: 800; margin-top: 3px; color: #111827; }
+
+  /* Machine load bars */
+  .machine-row { margin: 6px 16px; }
+  .machine-bar {
+    background: #fff; border-radius: 10px; padding: 10px 12px;
+  }
+  .machine-head { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+  .machine-name { font-weight: 700; }
+  .machine-pct { color: #6b7280; font-weight: 600; }
+  .machine-meter { height: 8px; background: #f3f4f6; border-radius: 4px; overflow: hidden; }
+  .machine-meter-fill { height: 100%; background: linear-gradient(90deg, #15803d, #65a30d); border-radius: 4px; }
+  .machine-meter-fill.high { background: linear-gradient(90deg, #d97706, #b91c1c); }
+  .machine-meter-fill.low { background: linear-gradient(90deg, #3b82f6, #1d4ed8); }
+
+  /* Notifications */
+  .notif-item {
+    display: flex; gap: 10px; background: #fff; margin: 0 16px 8px;
+    padding: 12px; border-radius: 10px; align-items: flex-start;
+  }
+  .notif-item.unread { background: #eff6ff; border-left: 3px solid #1a56db; }
+  .notif-icon {
+    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .ni-issue { background: #fee2e2; color: #b91c1c; }
+  .ni-new { background: #dcfce7; color: #15803d; }
+  .ni-deadline { background: #fef3c7; color: #d97706; }
+  .ni-info { background: #dbeafe; color: #1d4ed8; }
+  .notif-content { flex: 1; }
+  .notif-title { font-size: 13px; font-weight: 600; color: #111827; }
+  .notif-body { font-size: 12px; color: #6b7280; margin-top: 2px; }
+  .notif-time { font-size: 10px; color: #9ca3af; margin-top: 4px; }
+
+  /* Audit log */
+  .audit-item {
+    display: flex; gap: 10px; margin: 0 16px 6px; padding: 10px;
+    background: #fff; border-radius: 8px; font-size: 12px;
+  }
+  .audit-time { color: #9ca3af; font-family: monospace; font-size: 11px; min-width: 70px; }
+  .audit-user { color: #1a56db; font-weight: 600; }
+  .audit-action { color: #111827; }
+
+  /* Report */
+  .report-page {
+    background: #fff; margin: 12px 16px; border-radius: 12px;
+    padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .report-header {
+    padding-bottom: 10px; border-bottom: 2px solid #1a56db; margin-bottom: 12px;
+    display: flex; justify-content: space-between;
+  }
+  .report-logo { font-size: 18px; font-weight: 800; color: #1a56db; }
+  .report-meta { font-size: 10px; color: #6b7280; text-align: right; }
+  .report-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6b7280; margin: 10px 0 4px; }
+  .report-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .report-table td { padding: 4px; border-bottom: 1px solid #f3f4f6; }
+  .report-table td:first-child { color: #6b7280; width: 40%; }
+  .report-timeline { font-size: 11px; color: #374151; margin-top: 4px; }
+  .report-timeline div { padding: 3px 0; border-bottom: 1px dotted #e5e7eb; }
+
+  /* Dark mode toggle demo */
+  body.dark-demo .screen { background: #0f172a; color: #e5e7eb; }
+  body.dark-demo .order-card { background: #1e293b; color: #e5e7eb; }
+
+  /* Menu sheet */
+  .menu-sheet {
+    position: absolute; left: 16px; right: 16px; bottom: 20px;
+    background: #fff; border-radius: 14px; padding: 4px; z-index: 20;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+    transform: translateY(120%); transition: transform 0.25s;
+  }
+  .menu-sheet.visible { transform: translateY(0); }
+  .menu-sheet-backdrop {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.35); z-index: 19;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .menu-sheet-backdrop.visible { opacity: 1; pointer-events: auto; }
+  .menu-item {
+    padding: 13px 16px; font-size: 14px; cursor: pointer;
+    border-bottom: 1px solid #f3f4f6; display: flex; align-items: center; gap: 10px;
+  }
+  .menu-item:last-child { border-bottom: none; }
+  .menu-item.destructive { color: #b91c1c; }
+
+  /* Controls */
+  .controls {
+    position: fixed; top: 20px; left: 20px; background: #fff;
+    border-radius: 12px; padding: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    z-index: 100; max-width: 230px; max-height: 95vh; overflow-y: auto;
+  }
+  .controls h3 { font-size: 13px; margin-bottom: 8px; color: #111827; }
+  .controls h4 { font-size: 11px; margin: 10px 0 4px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+  .controls button {
+    display: block; width: 100%; text-align: left; border: none;
+    background: #f3f4f6; border-radius: 6px; padding: 7px 10px;
+    margin-bottom: 3px; font-size: 12px; cursor: pointer; color: #374151;
+  }
+  .controls button:hover { background: #e5e7eb; }
+  .controls button.active { background: #1a56db; color: #fff; }
+  .controls .hint { font-size: 10px; color: #9ca3af; margin-top: 6px; line-height: 1.4; }
+
+  @media (max-width: 900px) {
+    .controls { position: static; margin-bottom: 20px; max-width: none; }
+    body { padding-top: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <h3>📱 Náhled v3</h3>
+  <h4>Přihlášení</h4>
+  <button data-screen="pin">🔢 PIN login (tablet)</button>
+
+  <h4>Operátor</h4>
+  <button data-screen="mystation">🎯 Moje stanoviště</button>
+  <button data-screen="qr">📷 QR skener</button>
+  <button data-screen="station">⚙️ Pájení + checklist</button>
+  <button data-screen="aoi">⚠️ AOI + foto</button>
+
+  <h4>Dispečer</h4>
+  <button data-screen="dashboard" class="active">📊 Dashboard</button>
+  <button data-screen="detail">📋 Detail zakázky</button>
+  <button data-screen="warehouse">📦 Sklad / BOM</button>
+  <button data-screen="new1">➕ Nová – krok 1</button>
+  <button data-screen="documents">📄 Dokumenty</button>
+  <button data-screen="notifications">🔔 Notifikace</button>
+
+  <h4>Vedení</h4>
+  <button data-screen="kpi">📈 KPI dashboard</button>
+  <button data-screen="audit">📜 Audit log</button>
+  <button data-screen="report">📑 PDF report</button>
+
+  <div class="hint">Všechny navrhované funkce v jednom náhledu. Offline pruh, deadline barvy, fotky, checklisty, KPI.</div>
+</div>
+
+<div class="device-wrap">
+  <div class="device-label">iPhone 15 Pro</div>
+  <div class="phone">
+    <div class="screen" id="screen"></div>
+  </div>
+</div>
+
+<script>
+
+// Helper: status bar with optional offline
+const StatusBar = (offline = false) => `
+  <div class="status-bar"><span>9:41</span><span>📶 🔋</span></div>
+  ${offline ? '<div class="offline-bar">⚠️ Offline – 3 akce čekají na synchronizaci</div>' : ''}
+`;
+
+const SCREENS = {
+
+  pin: () => `
+    ${StatusBar()}
+    <div class="pin-screen">
+      <div class="pin-title">Pájení vlnou</div>
+      <div class="pin-sub">Tablet ID: 07 · Stanoviště</div>
+
+      <div class="pin-user">
+        <div class="pin-avatar">PS</div>
+        <div>
+          <div style="font-size:14px;font-weight:600;">Pavel Svoboda</div>
+          <div style="font-size:11px;opacity:0.75;">Operátor</div>
+        </div>
+      </div>
+
+      <div class="pin-dots">
+        <div class="pin-dot filled"></div>
+        <div class="pin-dot filled"></div>
+        <div class="pin-dot filled"></div>
+        <div class="pin-dot"></div>
+      </div>
+
+      <div class="pin-keypad">
+        <button class="pin-key">1</button>
+        <button class="pin-key">2</button>
+        <button class="pin-key">3</button>
+        <button class="pin-key">4</button>
+        <button class="pin-key">5</button>
+        <button class="pin-key">6</button>
+        <button class="pin-key">7</button>
+        <button class="pin-key">8</button>
+        <button class="pin-key">9</button>
+        <button class="pin-key special">👤</button>
+        <button class="pin-key">0</button>
+        <button class="pin-key special">⌫</button>
+      </div>
+
+      <div style="margin-top:auto;padding-top:20px;font-size:11px;opacity:0.6;">
+        Rychlé přepnutí uživatele dole
+      </div>
+    </div>
+  `,
+
+  mystation: () => `
+    ${StatusBar()}
+    <div class="nav-header">
+      <div class="title">Pavel S. · Pájení vlnou</div>
+      <div class="action" style="font-size:14px;">🔄</div>
+    </div>
+
+    <div class="mystation-header">
+      <div class="ms-title">MOJE STANOVIŠTĚ</div>
+      <div class="ms-station">Pájení vlnou</div>
+      <div class="ms-queue">⏳ 2 zakázky čekají · 1 probíhá · průměrná fronta 45 min</div>
+    </div>
+
+    <div class="content">
+
+      <div class="ms-section-title">
+        <span>⚡ Právě zpracovává</span>
+      </div>
+      <div class="order-card due-soon" onclick="showScreen('station')">
+        <div class="oc-top">
+          <div style="flex:1;">
+            <div class="oc-num">260321</div>
+            <div class="oc-customer">ACME s.r.o.</div>
+            <div class="oc-product">CTRL-100 · 500 ks · prog. WAVE-042</div>
+          </div>
+          <span class="status-badge s-progress">🔄 13 min</span>
+        </div>
+        <div class="due-row">
+          <span>Zahájeno 13:20</span>
+          <span class="deadline-pill dp-orange">Termín za 5 dní</span>
+        </div>
+      </div>
+
+      <div class="ms-section-title">
+        <span>📥 Fronta (2)</span>
+      </div>
+
+      <div class="order-card overdue" onclick="showScreen('detail')">
+        <div class="oc-top">
+          <div style="flex:1;">
+            <div class="oc-num">260319</div>
+            <div class="oc-customer">TechLine CZ</div>
+            <div class="oc-product">DD-10 · 200 ks</div>
+          </div>
+          <div class="badges-row">
+            <span class="prio-badge prio-urgent">Urgentní</span>
+          </div>
+        </div>
+        <div class="due-row">
+          <span class="overdue">⚠️ Termín dnes!</span>
+          <span class="deadline-pill dp-red">0 dní</span>
+        </div>
+      </div>
+
+      <div class="order-card due-ok">
+        <div class="oc-top">
+          <div style="flex:1;">
+            <div class="oc-num">260325</div>
+            <div class="oc-customer">Elektro Novák</div>
+            <div class="oc-product">SM-42 · 50 ks</div>
+          </div>
+          <div class="badges-row">
+            <span class="prio-badge prio-normal">Normální</span>
+          </div>
+        </div>
+        <div class="due-row">
+          <span>Obj: 22.04.2026</span>
+          <span class="deadline-pill dp-green">Termín za 15 dní</span>
+        </div>
+      </div>
+
+      <div style="padding:14px 16px;">
+        <div style="background:#fff;border-radius:10px;padding:10px 12px;font-size:12px;">
+          <div style="color:#6b7280;text-transform:uppercase;font-size:10px;font-weight:700;">Dnešní výkon</div>
+          <div style="display:flex;gap:16px;margin-top:6px;">
+            <div><span style="font-weight:800;font-size:16px;">4</span> <span style="color:#6b7280;font-size:11px;">dokončeno</span></div>
+            <div><span style="font-weight:800;font-size:16px;color:#15803d;">98.5%</span> <span style="color:#6b7280;font-size:11px;">FPY</span></div>
+            <div><span style="font-weight:800;font-size:16px;">6:24</span> <span style="color:#6b7280;font-size:11px;">aktivní čas</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fab-qr" onclick="showScreen('qr')">⌘</div>
+  `,
+
+  qr: () => `
+    ${StatusBar()}
+    <div class="nav-header" style="background:transparent;color:#fff;position:absolute;top:48px;left:0;right:0;z-index:10;">
+      <span class="back" onclick="showScreen('mystation')">←</span>
+      <div class="title">Naskenovat zakázku</div>
+    </div>
+    <div class="qr-screen">
+      <div class="qr-viewfinder">
+        <div class="qr-corners">
+          <div class="qr-corner tl"></div>
+          <div class="qr-corner tr"></div>
+          <div class="qr-corner bl"></div>
+          <div class="qr-corner br"></div>
+        </div>
+        <div class="qr-line"></div>
+      </div>
+      <div class="qr-hint">
+        <div class="qr-hint-title">Namiřte kameru na QR kód</div>
+        <div class="qr-hint-text">Kód najdete na průvodním listu nebo štítku zakázky</div>
+      </div>
+
+      <div style="position:absolute;bottom:40px;left:0;right:0;display:flex;justify-content:center;gap:16px;">
+        <button style="background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:50%;width:52px;height:52px;font-size:22px;cursor:pointer;">🔦</button>
+        <button style="background:#1a56db;border:none;color:#fff;border-radius:30px;padding:14px 22px;font-weight:700;cursor:pointer;">Zadat ručně</button>
+      </div>
+    </div>
+  `,
+
+  dashboard: () => `
+    ${StatusBar(true)}
+    <div class="nav-header">
+      <div class="title">Výroba</div>
+      <span class="action" onclick="showScreen('qr')">📷</span>
+      <span class="action" onclick="showScreen('notifications')">🔔<span class="badge-dot">3</span></span>
+    </div>
+
+    <div class="stats-strip">
+      <div class="stat-item"><div class="stat-value">4</div><div class="stat-label">Aktivní</div></div>
+      <div class="stat-item"><div class="stat-value stat-urgent">2</div><div class="stat-label">Problém</div></div>
+      <div class="stat-item"><div class="stat-value stat-warn">1</div><div class="stat-label">&lt; 48h</div></div>
+      <div class="stat-item"><div class="stat-value stat-good">12</div><div class="stat-label">Hotovo</div></div>
+    </div>
+
+    <div class="content">
+      <div class="search-row">
+        <span style="color:#9ca3af;">🔍</span>
+        <input placeholder="Číslo, výrobek, zákazník...">
+        <span class="search-qr" onclick="showScreen('qr')">⌘</span>
+      </div>
+      <div class="filter-bar">
+        <span class="filter-chip active">Aktivní</span>
+        <span class="filter-chip">Dokončené</span>
+        <span class="filter-chip">Skryté</span>
+        <span class="filter-chip">Tento týden</span>
+        <span class="filter-chip">Po termínu (1)</span>
+      </div>
+
+      <div class="order-card overdue" onclick="showScreen('detail')">
+        <div class="oc-top">
+          <div style="flex:1;">
+            <div class="oc-num">260319</div>
+            <div class="oc-customer">TechLine CZ</div>
+            <div class="oc-product">DD-10 Display driver</div>
+            <div class="oc-qty">200 ks · Opakovaná</div>
+          </div>
+          <div class="badges-row">
+            <span class="prio-badge prio-urgent">Urgentní</span>
+          </div>
+        </div>
+        <div class="progress-row">
+          <div class="progress-bar"><div class="progress-fill" style="width:75%"></div></div>
+          <span class="progress-text">9/12</span>
+        </div>
+        <div class="active-row">
+          <span class="status-badge s-progress">🔄 Pájení vlnou</span>
+        </div>
+        <div class="due-row">
+          <span>Obj: 10.04.2026</span>
+          <span class="overdue">⚠️ TERMÍN DNES</span>
+        </div>
+      </div>
+
+      <div class="order-card issue" onclick="showScreen('detail')">
+        <div class="oc-top">
+          <div style="flex:1;">
+            <div class="oc-num">260321</div>
+            <div class="oc-customer">ACME s.r.o.</div>
+            <div class="oc-product">CTRL-100 Řídící deska</div>
+            <div class="oc-qty">500 ks · Opakovaná</div>
+          </div>
+          <div class="badges-row">
+            <span class="prio-badge prio-urgent">Urgentní</span>
+            <span class="type-badge type-repeat">↻</span>
+          </div>
+        </div>
+        <div class="progress-row">
+          <div class="progress-bar"><div class="progress-fill" style="width:58%"></div></div>
+          <span class="progress-text">7/12</span>
+        </div>
+        <div class="active-row">
+          <span class="status-badge s-issue">⚠️ AOI</span>
+          <span class="status-badge s-progress">🔄 Pájení</span>
+        </div>
+        <div class="due-row">
+          <span>Obj: 20.04.2026</span>
+          <span class="deadline-pill dp-orange">Za 5 dní</span>
+        </div>
+      </div>
+
+      <div class="order-card due-soon" onclick="showScreen('detail')">
+        <div class="oc-top">
+          <div style="flex:1;">
+            <div class="oc-num">260322</div>
+            <div class="oc-customer">Elektro Novák</div>
+            <div class="oc-product">SM-42 Sensor modul</div>
+            <div class="oc-qty">200 ks · Nový výrobek</div>
+          </div>
+          <div class="badges-row">
+            <span class="prio-badge prio-high">Vysoká</span>
+            <span class="type-badge type-new">✨</span>
+          </div>
+        </div>
+        <div class="progress-row">
+          <div class="progress-bar"><div class="progress-fill" style="width:25%"></div></div>
+          <span class="progress-text">3/12</span>
+        </div>
+        <div class="active-row">
+          <span class="status-badge s-progress">🔄 Automaty – Beta</span>
+        </div>
+        <div class="due-row">
+          <span>Obj: 21.04.2026</span>
+          <span class="deadline-pill dp-orange">Za 2 dny</span>
+        </div>
+      </div>
+
+      <div class="order-card due-ok" onclick="showScreen('detail')">
+        <div class="oc-top">
+          <div style="flex:1;">
+            <div class="oc-num">260323</div>
+            <div class="oc-customer">TechLine CZ</div>
+            <div class="oc-product">DD-10 Display driver</div>
+            <div class="oc-qty">50 ks</div>
+          </div>
+          <div class="badges-row">
+            <span class="prio-badge prio-normal">Normální</span>
+          </div>
+        </div>
+        <div class="progress-row">
+          <div class="progress-bar"><div class="progress-fill" style="width:8%"></div></div>
+          <span class="progress-text">1/12</span>
+        </div>
+        <div class="active-row">
+          <span class="status-badge s-progress">🔄 Sklad</span>
+        </div>
+        <div class="due-row">
+          <span>Obj: 22.04.2026</span>
+          <span class="deadline-pill dp-green">Za 20 dní</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="fab" onclick="showScreen('new1')">＋</div>
+    <div class="tab-bar">
+      <div class="tab active"><span class="icon">▦</span>Přehled</div>
+      <div class="tab" onclick="showScreen('mystation')"><span class="icon">🎯</span>Moje</div>
+      <div class="tab" onclick="showScreen('kpi')"><span class="icon">📈</span>Statistiky</div>
+      <div class="tab"><span class="icon">◉</span>Profil</div>
+    </div>
+  `,
+
+  detail: () => `
+    ${StatusBar()}
+    <div class="nav-header">
+      <span class="back" onclick="showScreen('dashboard')">←</span>
+      <div class="title">260321</div>
+      <span class="action" onclick="showScreen('report')">📤</span>
+      <span class="action" onclick="toggleMenu(true)">⋯</span>
+    </div>
+    <div class="content">
+      <div class="order-header-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+          <div>
+            <div class="oc-num">260321</div>
+            <div style="font-size:15px;font-weight:700;margin-top:4px;">ACME s.r.o.</div>
+            <div style="font-size:13px;color:#374151;">CTRL-100 Řídící deska</div>
+          </div>
+          <div class="badges-row">
+            <span class="prio-badge prio-urgent">Urgentní</span>
+            <span class="type-badge type-repeat">↻ Opakovaná</span>
+          </div>
+        </div>
+        <div class="meta-grid">
+          <div class="meta-item"><div class="meta-item-label">Počet kusů</div><div class="meta-item-value">500 ks</div></div>
+          <div class="meta-item"><div class="meta-item-label">Automat</div><div class="meta-item-value">🔧 Beta</div></div>
+          <div class="meta-item"><div class="meta-item-label">Objednáno</div><div class="meta-item-value">20.04.2026</div></div>
+          <div class="meta-item"><div class="meta-item-label">Termín dodání</div><div class="meta-item-value" style="color:#d97706;">28.04 · za 5 dní</div></div>
+        </div>
+
+        <div class="info-box" style="margin: 10px 0 0;">
+          <span class="info-box-icon">📝</span>
+          <div>
+            <div class="info-box-title">Poznámka k výrobku CTRL-100</div>
+            Citlivé pájení – použít teplotu max. 260°C. Poslední revize dokumentů: 15.03.2026.
+          </div>
+        </div>
+      </div>
+
+      <div class="tabs-row">
+        <div class="tab-btn active">Stanoviště</div>
+        <div class="tab-btn" onclick="showScreen('documents')">Dokumenty (3)</div>
+        <div class="tab-btn">Poznámky (4)</div>
+        <div class="tab-btn" onclick="showScreen('audit')">Historie</div>
+      </div>
+
+      <div style="padding:14px 0;">
+        ${[
+          { num: 1, name: 'Sklad · Materiál kompletní', status: 'completed', time: 'Dokončeno 22.04. 08:15', dur: '45 min' },
+          { num: 2, name: 'Automaty – Beta', status: 'completed', time: 'Dokončeno 22.04. 14:30', dur: '6h 15min' },
+          { num: 3, name: 'AOI kontrola', status: 'issue', detail: '📷 Nalezeny 2 vadné spoje – viz foto', dur: 'Blokováno 2h 30min' },
+          { num: 4, name: 'RTG', status: 'completed', dur: '25 min' },
+          { num: 5, name: 'Oprava po AOI / kontrola', status: 'completed', dur: '40 min' },
+          { num: 6, name: 'Osazování', status: 'completed', dur: '2h 10min' },
+          { num: 7, name: 'Pájení vlnou · prog. WAVE-042', status: 'progress', time: 'Zahájeno 23.04. 13:20', dur: 'Běží 13 min' },
+          { num: 8, name: 'Oprava+kontrola po pájení', status: 'waiting' },
+          { num: 9, name: 'Programování', status: 'waiting' },
+          { num: 10, name: 'Lakování', status: 'waiting' },
+          { num: 11, name: 'Výstupní kontrola', status: 'waiting' },
+          { num: 12, name: 'Balení', status: 'waiting' },
+        ].map((s, i, a) => {
+          const c = { completed:'#15803d', progress:'#1d4ed8', issue:'#b91c1c', waiting:'#9ca3af' };
+          const bg = { completed:'#dcfce7', progress:'#dbeafe', issue:'#fee2e2', waiting:'#f3f4f6' };
+          const lbl = { completed:'✓', progress:'🔄', issue:'⚠️', waiting:'○' };
+          const target = s.num === 3 ? 'aoi' : s.num === 7 ? 'station' : s.num === 1 ? 'warehouse' : 'station';
+          return `
+            <div class="station-row" onclick="showScreen('${target}')">
+              <div class="timeline-col">
+                <div class="timeline-dot" style="background:${c[s.status]}"></div>
+                ${i < a.length - 1 ? '<div class="timeline-line"></div>' : ''}
+              </div>
+              <div class="station-card" style="border-left-color:${c[s.status]}">
+                <div class="sc-header">
+                  <span class="sc-name">${s.num}. ${s.name}</span>
+                  <span class="status-badge" style="background:${bg[s.status]};color:${c[s.status]}">${lbl[s.status]}</span>
+                </div>
+                ${s.detail ? `<div class="sc-detail" style="color:#b91c1c;">${s.detail}</div>` : ''}
+                ${s.time ? `<div class="sc-detail">${s.time}</div>` : ''}
+                ${s.dur ? `<div class="sc-duration">⏱ ${s.dur}</div>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+      <div class="info-box success" style="margin-bottom:20px;">
+        <span class="info-box-icon">📊</span>
+        <div>
+          <div class="info-box-title">Odhad dokončení</div>
+          Na základě historie podobných zakázek: <b>26.04.2026 (za 3 dny)</b> – 2 dny rezerva před termínem
+        </div>
+      </div>
+    </div>
+
+    <div class="menu-sheet-backdrop" id="backdrop" onclick="toggleMenu(false)"></div>
+    <div class="menu-sheet" id="menu">
+      <div class="menu-item"><span style="font-size:18px;">🖨️</span><span>Vytisknout QR kód + průvodku</span></div>
+      <div class="menu-item"><span style="font-size:18px;">📤</span><span>Exportovat PDF report</span></div>
+      <div class="menu-item"><span style="font-size:18px;">👁️‍🗨️</span><span>Skrýt zakázku</span></div>
+      <div class="menu-item"><span style="font-size:18px;">✅</span><span>Označit jako dokončenou</span></div>
+      <div class="menu-item destructive"><span style="font-size:18px;">🗑️</span><span>Smazat zakázku</span></div>
+      <div class="menu-item" style="justify-content:center;color:#6b7280;" onclick="toggleMenu(false)"><span>Zrušit</span></div>
+    </div>
+  `,
+
+  warehouse: () => `
+    ${StatusBar()}
+    <div class="nav-header">
+      <span class="back" onclick="showScreen('detail')">←</span>
+      <div class="title">Sklad – 260321</div>
+    </div>
+    <div class="warehouse-head">
+      <div class="wh-icon warn">📦</div>
+      <div style="flex:1;">
+        <div class="wh-title">Kontrola materiálu</div>
+        <div class="wh-sub">CTRL-100 · 500 ks · BOM v2 · 24 položek</div>
+      </div>
+    </div>
+
+    <div class="info-box warn">
+      <span class="info-box-icon">⚠️</span>
+      <div>
+        <div class="info-box-title">Chybí 2 položky</div>
+        Zakázku nelze pustit do výroby, dokud není materiál kompletní. Dispečer upozorněn.
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="section-title" style="padding:8px 16px;">Komponenty (24)</div>
+
+      <div class="bom-item">
+        <div class="bom-check missing">✕</div>
+        <div style="flex:1;">
+          <div class="bom-name">IC-STM32F407</div>
+          <div class="bom-qty">Potřeba: 500 ks · Skladem: 120 ks</div>
+        </div>
+        <div class="bom-status missing">CHYBÍ 380</div>
+      </div>
+
+      <div class="bom-item">
+        <div class="bom-check missing">✕</div>
+        <div style="flex:1;">
+          <div class="bom-name">CAP-100uF-25V</div>
+          <div class="bom-qty">Potřeba: 1500 ks · Skladem: 0</div>
+        </div>
+        <div class="bom-status missing">CHYBÍ 1500</div>
+      </div>
+
+      <div class="bom-item">
+        <div class="bom-check ok">✓</div>
+        <div style="flex:1;">
+          <div class="bom-name">R-10k-0603</div>
+          <div class="bom-qty">Potřeba: 3000 ks · Skladem: 12 000</div>
+        </div>
+        <div class="bom-status ok">OK</div>
+      </div>
+
+      <div class="bom-item">
+        <div class="bom-check ok">✓</div>
+        <div style="flex:1;">
+          <div class="bom-name">PCB-CTRL100-rev2</div>
+          <div class="bom-qty">Potřeba: 500 ks · Skladem: 520</div>
+        </div>
+        <div class="bom-status ok">OK</div>
+      </div>
+
+      <div class="bom-item">
+        <div class="bom-check partial">◐</div>
+        <div style="flex:1;">
+          <div class="bom-name">LED-GREEN-0805</div>
+          <div class="bom-qty">Potřeba: 500 ks · Skladem: 450</div>
+        </div>
+        <div class="bom-status" style="color:#d97706;">ČÁSTEČNĚ</div>
+      </div>
+
+      <div style="padding:14px 16px;">
+        <button class="btn-primary">
+          ✉️ Vytvořit požadavek na doplnění
+        </button>
+      </div>
+    </div>
+  `,
+
+  station: () => `
+    ${StatusBar()}
+    <div class="nav-header">
+      <span class="back" onclick="showScreen('detail')">←</span>
+      <div class="title">Pájení vlnou</div>
+      <span class="action">🎙️</span>
+    </div>
+    <div class="content">
+      <div class="status-card-big">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <span style="font-size:13px;font-weight:600;color:#374151;">260321 · ACME · CTRL-100</span>
+          <span class="status-badge s-progress">🔄 Probíhá</span>
+        </div>
+        <div style="font-size:12px;color:#6b7280;">Operátor: Pavel Svoboda</div>
+      </div>
+
+      <div class="timer-card">
+        <div class="timer-icon">⏱</div>
+        <div>
+          <div class="timer-value">00:13:42</div>
+          <div class="timer-label">Průměr pro CTRL-100: 18 min · běží OK</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Typ pájení + program</div>
+        <div class="form-card" style="padding:10px;">
+          <div class="chip-row" style="margin-bottom:8px;">
+            <span class="chip selected">🌊 Vlna</span>
+            <span class="chip">Selektivní</span>
+            <span class="chip">Ruční</span>
+          </div>
+          <input class="input" value="WAVE-042" placeholder="Číslo programu">
+          <div style="font-size:11px;color:#6b7280;margin-top:6px;">💡 Pro CTRL-100 byl minule použit <b>WAVE-042</b></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">✅ Kontrolní list (před dokončením)</div>
+      </div>
+      <div class="checklist">
+        <div class="checklist-item done">
+          <div class="checkbox checked">✓</div>
+          <div class="cl-text">Teplota vlny nastavena (260°C)</div>
+        </div>
+        <div class="checklist-item done">
+          <div class="checkbox checked">✓</div>
+          <div class="cl-text">Rychlost dopravníku zkontrolována</div>
+        </div>
+        <div class="checklist-item done">
+          <div class="checkbox checked">✓</div>
+          <div class="cl-text">Tavidlo naplněno</div>
+        </div>
+        <div class="checklist-item">
+          <div class="checkbox"></div>
+          <div class="cl-text">První kus vizuálně zkontrolován</div>
+        </div>
+        <div class="checklist-item">
+          <div class="checkbox"></div>
+          <div class="cl-text">Pájecí teplota zaznamenána</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">📊 Sledování výstupu</div>
+      </div>
+      <div class="scrap-card">
+        <div class="scrap-row">
+          <div class="scrap-item ok">
+            <div class="scrap-label">OK</div>
+            <div class="scrap-value ok">485</div>
+          </div>
+          <div class="scrap-item rework">
+            <div class="scrap-label">Oprava</div>
+            <div class="scrap-value rework">12</div>
+          </div>
+          <div class="scrap-item scrap">
+            <div class="scrap-label">Zmetky</div>
+            <div class="scrap-value scrap">3</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:#6b7280;margin-top:8px;text-align:center;">
+          FPY: <b style="color:#15803d;">97.0%</b> (cíl &gt;98%)
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Změnit stav</div>
+        <div class="action-grid">
+          <button class="btn-outline" style="border-color:#15803d;color:#15803d;">✓ Dokončit</button>
+          <button class="btn-outline" style="border-color:#b91c1c;color:#b91c1c;">⚠️ Problém</button>
+          <button class="btn-outline" style="border-color:#6b7280;color:#6b7280;">⏸ Pauza</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Poznámka stanoviště</div>
+      </div>
+      <div class="note-form">
+        <div class="chip-row" style="margin-bottom:8px;">
+          <span class="chip selected">Poznámka</span>
+          <span class="chip">Žádost</span>
+          <span class="chip">Problém</span>
+        </div>
+        <textarea placeholder="Napište poznámku..."></textarea>
+        <div class="attach-row">
+          <button class="attach-btn">📷 Foto</button>
+          <button class="attach-btn recording">🔴 Nahrávám... 0:04</button>
+          <button class="attach-btn">📎 Soubor</button>
+        </div>
+        <button class="btn-primary" style="margin-top:10px;padding:10px;font-size:13px;">Odeslat</button>
+      </div>
+    </div>
+  `,
+
+  aoi: () => `
+    ${StatusBar()}
+    <div class="nav-header">
+      <span class="back" onclick="showScreen('detail')">←</span>
+      <div class="title">AOI kontrola</div>
+    </div>
+    <div class="content">
+      <div class="status-card-big" style="border-left-color:#b91c1c;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <span style="font-size:13px;font-weight:600;color:#374151;">260321 · CTRL-100</span>
+          <span class="status-badge s-issue">⚠️ Problém</span>
+        </div>
+        <div style="font-size:12px;color:#6b7280;">Blokováno 2h 30min · Jan Novák</div>
+      </div>
+
+      <div class="info-box danger">
+        <span class="info-box-icon">⚠️</span>
+        <div>
+          <div class="info-box-title">Stanoviště čeká na rozhodnutí dispečera</div>
+          Nahlášen problém s fotkou. Pokračovat lze až po odsouhlasení.
+        </div>
+      </div>
+
+      <div class="section"><div class="section-title">Poznámky stanoviště (2)</div></div>
+
+      <div class="note-card">
+        <div class="note-header">
+          <span class="note-type-badge nt-issue">Problém</span>
+          <span style="font-size:11px;color:#6b7280;">Jan Novák</span>
+        </div>
+        <div class="note-content">Nalezeny 2 vadné pájené spoje na pozici R12 a C8. Přikládám foto.</div>
+        <div class="note-photo">📷</div>
+        <div class="note-meta">23.04. 15:30 · 2 fotky</div>
+      </div>
+
+      <div class="note-card">
+        <div class="note-header">
+          <span class="note-type-badge nt-change">Žádost o úpravu</span>
+          <span style="font-size:11px;color:#6b7280;">Jan Novák</span>
+        </div>
+        <div class="note-content">Prosím o kontrolu ofsetu kamery AOI – špatně detekuje referenční body u této desky.</div>
+        <div class="note-meta">🎙️ 0:23 · Hlasová zpráva · 23.04. 16:00</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Akce</div>
+        <div class="action-grid">
+          <button class="btn-outline" style="border-color:#15803d;color:#15803d;">✓ Vyřešeno</button>
+          <button class="btn-outline" style="border-color:#1a56db;color:#1a56db;">↩ Poslat zpět</button>
+          <button class="btn-outline" style="border-color:#92400e;color:#92400e;">⏭ Přeskočit</button>
+        </div>
+      </div>
+    </div>
+  `,
+
+  new1: () => `
+    ${StatusBar()}
+    <div class="nav-header">
+      <span class="back" onclick="showScreen('dashboard')">←</span>
+      <div class="title">Nová zakázka</div>
+    </div>
+    <div class="content">
+      <div class="form-section">
+        <div class="section-title">Import z ERP</div>
+        <div class="form-card" style="display:flex;gap:8px;align-items:center;">
+          <span style="font-size:22px;">🔗</span>
+          <div style="flex:1;font-size:12px;color:#374151;">Načíst zakázku z Pohody/SAP</div>
+          <button class="btn-outline" style="border-color:#1a56db;color:#1a56db;padding:6px 10px;">Načíst</button>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="section-title">Zakázka</div>
+        <div class="form-card">
+          <div class="form-row">
+            <label class="form-label">Číslo zakázky <span class="req">*</span></label>
+            <input class="input" value="260324" maxlength="6" placeholder="6 číslic">
+          </div>
+          <div class="form-row">
+            <label class="form-label">Zákazník <span class="req">*</span></label>
+            <input class="input" value="ACME s.r.o." placeholder="Zákazník (autocomplete)">
+          </div>
+          <div class="form-row">
+            <label class="form-label">Výrobek <span class="req">*</span></label>
+            <input class="input" value="CTRL-100 Řídící deska" placeholder="Výrobek (autocomplete)">
+          </div>
+          <div class="form-row">
+            <label class="form-label">Typ výroby <span class="req">*</span></label>
+            <div class="chip-row">
+              <span class="chip">✨ Nový</span>
+              <span class="chip selected">↻ Opakovaná</span>
+              <span class="chip">⟲ Revize</span>
+            </div>
+          </div>
+          <div class="form-row">
+            <label class="form-label">Počet kusů <span class="req">*</span></label>
+            <input class="input" type="number" value="500">
+          </div>
+        </div>
+      </div>
+
+      <div class="info-box success">
+        <span class="info-box-icon">✓</span>
+        <div>
+          <div class="info-box-title">Výrobek nalezen v knihovně</div>
+          Dokumenty, checklisty a historické časy budou automaticky načteny.
+        </div>
+      </div>
+
+      <div style="padding:10px 16px;">
+        <button class="btn-primary">Pokračovat na termíny →</button>
+      </div>
+    </div>
+  `,
+
+  documents: () => `
+    ${StatusBar()}
+    <div class="nav-header">
+      <span class="back" onclick="showScreen('detail')">←</span>
+      <div class="title">260321 · Dokumenty</div>
+    </div>
+    <div class="content">
+      <div class="info-box success">
+        <span class="info-box-icon">♻️</span>
+        <div>
+          <div class="info-box-title">Auto-načteno z knihovny výrobku</div>
+          CTRL-100 · 3 dokumenty z 15.03.2026
+        </div>
+      </div>
+      <div class="upload-btn-row">⬆️ Nahrát novou verzi</div>
+
+      <div class="doc-row auto-loaded">
+        <div class="doc-icon">📊</div>
+        <div style="flex:1;">
+          <div class="doc-name">CTRL-100_BOM_v2.xlsx<span class="doc-badge">AUTO</span></div>
+          <div class="doc-meta">BOM · 128 KB</div>
+        </div>
+        <div style="color:#9ca3af;">›</div>
+      </div>
+      <div class="doc-row auto-loaded">
+        <div class="doc-icon">🖼️</div>
+        <div style="flex:1;">
+          <div class="doc-name">CTRL-100_vykres_rev2.pdf<span class="doc-badge">AUTO</span></div>
+          <div class="doc-meta">Výkres · 2.4 MB</div>
+        </div>
+        <div style="color:#9ca3af;">›</div>
+      </div>
+      <div class="doc-row auto-loaded">
+        <div class="doc-icon">📋</div>
+        <div style="flex:1;">
+          <div class="doc-name">CTRL-100_pruvodni_list.pdf<span class="doc-badge">AUTO</span></div>
+          <div class="doc-meta">Průvodní list · 340 KB</div>
+        </div>
+        <div style="color:#9ca3af;">›</div>
+      </div>
+    </div>
+  `,
+
+  notifications: () => `
+    ${StatusBar()}
+    <div class="nav-header">
+      <span class="back" onclick="showScreen('dashboard')">←</span>
+      <div class="title">Notifikace</div>
+      <span class="action" style="font-size:13px;">Vše přečteno</span>
+    </div>
+    <div class="content">
+      <div class="section-title" style="padding:10px 16px 4px;">Dnes</div>
+
+      <div class="notif-item unread">
+        <div class="notif-icon ni-issue">⚠️</div>
+        <div class="notif-content">
+          <div class="notif-title">Problém na 260321 · AOI</div>
+          <div class="notif-body">Jan Novák nahlásil 2 vadné spoje. Přiložena fotka.</div>
+          <div class="notif-time">před 5 min</div>
+        </div>
+      </div>
+
+      <div class="notif-item unread">
+        <div class="notif-icon ni-deadline">⏰</div>
+        <div class="notif-content">
+          <div class="notif-title">Termín dnes: 260319</div>
+          <div class="notif-body">DD-10 Display driver – stále na stanovišti Pájení</div>
+          <div class="notif-time">před 30 min</div>
+        </div>
+      </div>
+
+      <div class="notif-item unread">
+        <div class="notif-icon ni-new">🎯</div>
+        <div class="notif-content">
+          <div class="notif-title">Nová zakázka na tvém stanovišti</div>
+          <div class="notif-body">260325 · Elektro Novák · SM-42 čeká na Pájení</div>
+          <div class="notif-time">před 1 h</div>
+        </div>
+      </div>
+
+      <div class="section-title" style="padding:12px 16px 4px;">Včera</div>
+
+      <div class="notif-item">
+        <div class="notif-icon ni-info">📦</div>
+        <div class="notif-content">
+          <div class="notif-title">Materiál doplněn</div>
+          <div class="notif-body">IC-STM32F407 naskladněno 500 ks · 260321 lze pustit do výroby</div>
+          <div class="notif-time">včera 14:20</div>
+        </div>
+      </div>
+
+      <div class="notif-item">
+        <div class="notif-icon ni-new">✓</div>
+        <div class="notif-content">
+          <div class="notif-title">260318 dokončena</div>
+          <div class="notif-body">PSU-50 · 300 ks · FPY 99.3%</div>
+          <div class="notif-time">včera 09:15</div>
+        </div>
+      </div>
+    </div>
+  `,
+
+  kpi: () => `
+    ${StatusBar()}
+    <div class="nav-header">
+      <span class="back" onclick="showScreen('dashboard')">←</span>
+      <div class="title">Statistiky</div>
+      <span class="action" style="font-size:13px;">Týden ▾</span>
+    </div>
+    <div class="content">
+
+      <div class="kpi-big">
+        <div class="kpi-big-title">📅 On-Time Delivery</div>
+        <div class="kpi-big-value">94.2%</div>
+        <div class="kpi-big-trend up">▲ +3.1% vs minulý týden</div>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi-small">
+          <div class="kpi-small-label">First Pass Yield</div>
+          <div class="kpi-small-value" style="color:#15803d;">97.8%</div>
+        </div>
+        <div class="kpi-small">
+          <div class="kpi-small-label">Průměrný průběh</div>
+          <div class="kpi-small-value">2.4 dne</div>
+        </div>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi-small">
+          <div class="kpi-small-label">Dokončeno (týden)</div>
+          <div class="kpi-small-value">12</div>
+        </div>
+        <div class="kpi-small">
+          <div class="kpi-small-label">Ve výrobě</div>
+          <div class="kpi-small-value" style="color:#1a56db;">4</div>
+        </div>
+      </div>
+
+      <div class="section-title" style="padding:14px 16px 6px;">⚙️ Zatížení automatů</div>
+
+      <div class="machine-row"><div class="machine-bar">
+        <div class="machine-head"><span class="machine-name">Alfa</span><span class="machine-pct">95%</span></div>
+        <div class="machine-meter"><div class="machine-meter-fill high" style="width:95%"></div></div>
+      </div></div>
+      <div class="machine-row"><div class="machine-bar">
+        <div class="machine-head"><span class="machine-name">Beta</span><span class="machine-pct">78%</span></div>
+        <div class="machine-meter"><div class="machine-meter-fill" style="width:78%"></div></div>
+      </div></div>
+      <div class="machine-row"><div class="machine-bar">
+        <div class="machine-head"><span class="machine-name">Gama</span><span class="machine-pct">62%</span></div>
+        <div class="machine-meter"><div class="machine-meter-fill" style="width:62%"></div></div>
+      </div></div>
+      <div class="machine-row"><div class="machine-bar">
+        <div class="machine-head"><span class="machine-name">Delta</span><span class="machine-pct">45%</span></div>
+        <div class="machine-meter"><div class="machine-meter-fill low" style="width:45%"></div></div>
+      </div></div>
+      <div class="machine-row"><div class="machine-bar">
+        <div class="machine-head"><span class="machine-name">Eta</span><span class="machine-pct">30%</span></div>
+        <div class="machine-meter"><div class="machine-meter-fill low" style="width:30%"></div></div>
+      </div></div>
+      <div class="machine-row"><div class="machine-bar">
+        <div class="machine-head"><span class="machine-name">Theta</span><span class="machine-pct">12%</span></div>
+        <div class="machine-meter"><div class="machine-meter-fill low" style="width:12%"></div></div>
+      </div></div>
+
+      <div class="section-title" style="padding:14px 16px 6px;">🏆 Top 5 problémových výrobků</div>
+
+      <div style="margin:0 16px 20px;background:#fff;border-radius:12px;padding:12px;font-size:13px;">
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f3f4f6;">
+          <span>1. CTRL-100</span><span style="color:#b91c1c;font-weight:700;">8 problémů</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f3f4f6;">
+          <span>2. SM-42</span><span style="color:#d97706;font-weight:700;">5 problémů</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f3f4f6;">
+          <span>3. DD-10</span><span style="color:#d97706;font-weight:700;">3 problémy</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f3f4f6;">
+          <span>4. PSU-50</span><span style="color:#15803d;font-weight:700;">1 problém</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;">
+          <span>5. LED-100</span><span style="color:#15803d;font-weight:700;">1 problém</span>
+        </div>
+      </div>
+    </div>
+  `,
+
+  audit: () => `
+    ${StatusBar()}
+    <div class="nav-header">
+      <span class="back" onclick="showScreen('detail')">←</span>
+      <div class="title">Historie · 260321</div>
+    </div>
+    <div class="content">
+      <div class="section-title" style="padding:12px 16px 6px;">Všechny změny (20)</div>
+
+      <div class="audit-item">
+        <div class="audit-time">23.04<br>16:00</div>
+        <div style="flex:1;"><span class="audit-user">Jan Novák</span> <span class="audit-action">přidal poznámku (žádost o úpravu) s hlasovou zprávou</span></div>
+      </div>
+      <div class="audit-item">
+        <div class="audit-time">23.04<br>15:30</div>
+        <div style="flex:1;"><span class="audit-user">Jan Novák</span> <span class="audit-action">nahlásil problém na AOI s 2 fotografiemi</span></div>
+      </div>
+      <div class="audit-item">
+        <div class="audit-time">23.04<br>13:20</div>
+        <div style="flex:1;"><span class="audit-user">Pavel Svoboda</span> <span class="audit-action">zahájil Pájení vlnou (program WAVE-042)</span></div>
+      </div>
+      <div class="audit-item">
+        <div class="audit-time">23.04<br>11:05</div>
+        <div style="flex:1;"><span class="audit-user">Marie N.</span> <span class="audit-action">dokončila Osazování (485 OK / 12 oprava / 3 zmetky)</span></div>
+      </div>
+      <div class="audit-item">
+        <div class="audit-time">22.04<br>14:30</div>
+        <div style="flex:1;"><span class="audit-user">Auto</span> <span class="audit-action">přechod z Automaty → AOI kontrola</span></div>
+      </div>
+      <div class="audit-item">
+        <div class="audit-time">22.04<br>08:15</div>
+        <div style="flex:1;"><span class="audit-user">Dispečer</span> <span class="audit-action">potvrdil materiál kompletní (24/24 BOM položek)</span></div>
+      </div>
+      <div class="audit-item">
+        <div class="audit-time">20.04<br>09:00</div>
+        <div style="flex:1;"><span class="audit-user">Ing. Dvořák</span> <span class="audit-action">vytvořil zakázku 260321 (import z Pohody)</span></div>
+      </div>
+    </div>
+  `,
+
+  report: () => `
+    ${StatusBar()}
+    <div class="nav-header">
+      <span class="back" onclick="showScreen('detail')">←</span>
+      <div class="title">Report k zakázce</div>
+      <span class="action" style="font-size:13px;">Sdílet</span>
+    </div>
+    <div class="content" style="background:#e5e7eb;">
+
+      <div class="report-page">
+        <div class="report-header">
+          <div>
+            <div class="report-logo">VÝROBA</div>
+            <div style="font-size:11px;color:#6b7280;">Protokol o výrobě</div>
+          </div>
+          <div class="report-meta">
+            Datum: 23.04.2026<br>Strana 1/2
+          </div>
+        </div>
+
+        <div class="report-section-title">Zakázka</div>
+        <table class="report-table">
+          <tr><td>Číslo</td><td><b>260321</b></td></tr>
+          <tr><td>Zákazník</td><td>ACME s.r.o.</td></tr>
+          <tr><td>Výrobek</td><td>CTRL-100 Řídící deska (rev. 2)</td></tr>
+          <tr><td>Počet kusů</td><td>500</td></tr>
+          <tr><td>Automat</td><td>Beta</td></tr>
+          <tr><td>Objednáno / Dodání</td><td>20.04.2026 / 28.04.2026</td></tr>
+        </table>
+
+        <div class="report-section-title">Průběh výroby</div>
+        <div class="report-timeline">
+          <div>✓ 22.04 08:15 · Sklad (45 min)</div>
+          <div>✓ 22.04 14:30 · Automaty–Beta (6h 15m)</div>
+          <div>⚠️ 23.04 11:30 · AOI – 2 vadné spoje (foto)</div>
+          <div>✓ 23.04 12:30 · Oprava po AOI (40 min)</div>
+          <div>🔄 23.04 13:20 · Pájení vlnou WAVE-042</div>
+        </div>
+
+        <div class="report-section-title">Statistika kvality</div>
+        <table class="report-table">
+          <tr><td>OK kusy</td><td style="color:#15803d;"><b>485 (97.0%)</b></td></tr>
+          <tr><td>Oprava</td><td style="color:#d97706;">12</td></tr>
+          <tr><td>Zmetky</td><td style="color:#b91c1c;">3</td></tr>
+          <tr><td>FPY</td><td><b>97.0%</b></td></tr>
+        </table>
+      </div>
+
+      <div style="padding:0 16px 16px;display:flex;gap:8px;">
+        <button class="btn-primary" style="flex:1;">📥 Stáhnout PDF</button>
+        <button class="btn-outline" style="border-color:#1a56db;color:#1a56db;flex:1;justify-content:center;">✉️ Odeslat e-mailem</button>
+      </div>
+    </div>
+  `,
+};
+
+function showScreen(name) {
+  document.getElementById('screen').innerHTML = SCREENS[name]();
+  document.querySelectorAll('.controls button').forEach(b => {
+    b.classList.toggle('active', b.dataset.screen === name);
+  });
+}
+
+function toggleMenu(open) {
+  const menu = document.getElementById('menu');
+  const bd = document.getElementById('backdrop');
+  if (!menu || !bd) return;
+  menu.classList.toggle('visible', open);
+  bd.classList.toggle('visible', open);
+}
+
+document.querySelectorAll('.controls button').forEach(b => {
+  b.onclick = () => showScreen(b.dataset.screen);
+});
+
+showScreen('dashboard');
+</script>
+</body>
+</html>
