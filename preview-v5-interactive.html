@@ -7,10 +7,11 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
-    min-height: 100vh; padding: 20px; color: #111;
+    background: #101827;
+    min-height: 100vh; padding: 18px; color: #111;
+    display: flex; align-items: center; justify-content: center;
   }
-  .app-wrap { max-width: 1400px; margin: 0 auto; }
+  .app-wrap { width: min(100%, 430px); margin: 0 auto; }
   .toolbar {
     background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
     border-radius: 12px; padding: 16px; margin-bottom: 20px; color: #fff;
@@ -30,9 +31,9 @@
   .role-btn:hover, .screen-btn:hover { background: rgba(255,255,255,0.3); }
   .role-btn.active:hover, .screen-btn.active:hover { background: #fff; }
 
-  .phones-wrap { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; }
+  .phones-wrap { display: flex; justify-content: center; }
   .phone {
-    width: 390px; height: 844px;
+    width: min(390px, calc(100vw - 24px)); height: min(844px, calc(100vh - 28px));
     background: #000; border-radius: 48px; padding: 12px;
     box-shadow: 0 20px 60px rgba(0,0,0,0.4); flex-shrink: 0;
   }
@@ -126,7 +127,24 @@
   .st-card.issue    { border-left-color: #b91c1c; }
 
   .qty-row { display: flex; gap: 6px; margin-top: 8px; }
+  .qty-row.compact { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .qty-item { flex: 1; text-align: center; padding: 6px; background: #f9fafb; border-radius: 6px; }
+  .qty-row.compact .qty-item { min-width: 0; padding: 6px 4px; }
+  .qty-control {
+    display: grid; grid-template-columns: 24px minmax(0, 1fr) 24px;
+    align-items: center; gap: 3px; margin-top: 5px;
+  }
+  .qty-btn {
+    width: 24px; height: 28px; padding: 0; justify-content: center;
+    border-radius: 7px; background: #eef2f7; color: #111827; font-size: 15px;
+  }
+  .qty-input {
+    width: 100%; min-width: 0; height: 28px; padding: 2px;
+    text-align: center; font-weight: 800; font-size: 14px;
+    border: 1px solid #e5e7eb; border-radius: 7px; background: #fff;
+  }
+  .qty-input::-webkit-outer-spin-button,
+  .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   .qty-item b { display: block; font-size: 16px; font-weight: 700; }
   .qty-item .lbl { font-size: 10px; color: #6b7280; text-transform: uppercase; margin-top: 2px; }
 
@@ -277,25 +295,6 @@
 </head>
 <body>
 <div class="app-wrap">
-
-  <div class="toolbar">
-    <h1>📱 Výroba – Preview v5 <span style="opacity:0.7; font-size:14px; font-weight:400;">(interaktivní návrh)</span>
-      <button class="reset-btn" id="reset-btn" onclick="resetData()">🔄 Reset dat</button>
-    </h1>
-    <p>
-      Klikej na karty / tlačítka – skutečně se to děje. Můžeš <b>zakládat zakázky</b>, <b>přidávat kvalifikace</b>,
-      <b>zapínat/vypínat stanoviště</b>, <b>počítat kusy</b>, <b>předávat dávky</b>, <b>odškrtávat checklist</b>,
-      <b>zkontrolovat QR štítek</b> a <b>smazat/změnit prioritu notifikace</b>.
-      Data se ukládají do prohlížeče (localStorage) – reset je nahoře vpravo.
-    </p>
-
-    <div class="caption">👤 Role (kdo jsem)</div>
-    <div class="role-picker" id="role-picker"></div>
-
-    <div class="caption" style="margin-top:14px">📺 Obrazovky dané role</div>
-    <div class="screen-picker" id="screens-for-role"></div>
-  </div>
-
   <div class="phones-wrap" id="phones"></div>
 </div>
 
@@ -892,13 +891,13 @@ faceid: () => {
   const qtyCell = (color, label, field) => `
     <div class="qty-item" style="border:1.5px solid ${color}66;">
       <div style="color:${color}; font-size:10px; font-weight:700;">${label}</div>
-      <div style="display:flex; align-items:center; justify-content:center; gap:6px; margin-top:4px;">
-        <button class="btn" style="padding:4px 8px; background:#f3f4f6" data-act="qty" data-id="${o.id}" data-st="${stId}" data-f="${field}" data-d="-1">−</button>
+      <div class="qty-control">
+        <button class="btn qty-btn" data-act="qty" data-id="${o.id}" data-st="${stId}" data-f="${field}" data-d="-1">−</button>
         <input type="number" min="0" inputmode="numeric"
-               style="width:58px; padding:4px 2px; text-align:center; font-weight:800; color:${color}; font-size:18px; border:1px solid #e5e7eb; border-radius:6px; background:#fff;"
+               class="qty-input" style="color:${color};"
                value="${s[field]}"
                data-act="qty-set" data-id="${o.id}" data-st="${stId}" data-f="${field}" />
-        <button class="btn" style="padding:4px 8px; background:#f3f4f6" data-act="qty" data-id="${o.id}" data-st="${stId}" data-f="${field}" data-d="1">+</button>
+        <button class="btn qty-btn" data-act="qty" data-id="${o.id}" data-st="${stId}" data-f="${field}" data-d="1">+</button>
       </div>
     </div>`;
 
@@ -932,7 +931,7 @@ faceid: () => {
       </div>
 
       <div class="section-title">Zapsat kusy (+/− nebo klepni na číslo)</div>
-      <div class="qty-row">
+      <div class="qty-row compact">
         ${qtyCell('#15803d', 'OK', 'ok')}
         ${qtyCell('#d97706', 'OPRAVA', 'rework')}
         ${qtyCell('#b91c1c', 'ZMETEK', 'scrap')}
@@ -1095,6 +1094,13 @@ faceid: () => {
         <div class="sub-text">${esc(u.email)}</div>
         <div class="sub-text" style="margin-top:4px;">Role: <b>${roleLabel(u.role)}</b></div>
       </div>
+      <div class="section-title">Přepnout roli prototypu</div>
+      <div class="card">
+        <div class="chip-row">
+          ${ROLES.map(r => `<span class="chip ${u.role===r.id?'selected':''}" data-act="switch-role" data-role="${r.id}">${esc(r.label)}</span>`).join('')}
+        </div>
+        <div class="sub-text" style="margin-top:8px;">Přepínač je jen pro test návrhu. V ostré aplikaci roli nastaví Admin.</div>
+      </div>
       ${u.role === 'operator' ? `
         <div class="section-title">Mé stanoviště (klikni pro změnu)</div>
         <div class="card">
@@ -1107,6 +1113,7 @@ faceid: () => {
         </div>
       ` : ''}
       <button class="btn btn-outline btn-block" style="margin-top:14px;" data-act="logout">Odhlásit</button>
+      <button class="btn btn-outline btn-block" style="margin-top:8px;" data-act="reset-data">Reset dat prototypu</button>
     </div></div>
     ${u.role === 'dispatcher' ? bottomTabsDispatcher('op-profile') :
       u.role === 'tpv'        ? bottomTabsTpv('op-profile') :
@@ -1854,6 +1861,18 @@ const ACTIONS = {
   'dash-filter': (p) => { ui.dashboardFilter = p.f || 'active'; render(); },
   'toast': (p) => showToast(p.msg || 'OK'),
   'close-modal': () => { ui.modal = null; render(); },
+  'reset-data': () => resetData(),
+  'switch-role': (p) => {
+    const nextRole = p.role;
+    const u = DB.users.find(x => x.role === nextRole);
+    if (!u) { showToast('Pro tuhle roli není založený uživatel'); return; }
+    ui.role = nextRole;
+    DB.sessionUserId = u.id;
+    ui.screens = [defaultScreenForRole(nextRole)];
+    ui.modal = null;
+    saveDb();
+    render();
+  },
 
   'face-login': () => { ui.screens = [defaultScreenForRole(DB.users.find(u=>u.id===DB.sessionUserId).role)]; render(); },
   'logout': () => { ui.screens = ['faceid']; render(); },
@@ -2359,6 +2378,7 @@ function showToast(msg, ms = 1800) {
 
 function renderRolePicker() {
   const host = document.getElementById('role-picker');
+  if (!host) return;
   host.innerHTML = ROLES.map(r => `<button class="role-btn ${ui.role===r.id?'active':''}" data-role="${r.id}">${esc(r.label)}</button>`).join('');
   host.querySelectorAll('.role-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -2379,6 +2399,7 @@ function renderRolePicker() {
 function renderScreensPicker() {
   const list = SCREENS_FOR_ROLE[ui.role] || [];
   const host = document.getElementById('screens-for-role');
+  if (!host) return;
   host.innerHTML = list.map(s => `<button class="screen-btn ${ui.screens.includes(s.id)?'active':''}" data-screen="${s.id}">${esc(s.label)}</button>`).join('');
   host.querySelectorAll('.screen-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -2407,11 +2428,8 @@ function render() {
   if (ui.modal) html += renderModal();
   if (ui.toast) html += `<div class="toast show">${esc(ui.toast)}</div>`;
   wrap.innerHTML = `
-    <div>
-      <div class="phone ${data.extraClass || (DB.darkMode && ui.role !== 'operator' && ui.role !== 'tpv' && ui.role !== 'dispatcher' ? 'dark' : '')}">
-        <div class="phone-screen">${html}</div>
-      </div>
-      <div class="phone-caption">${esc(data.title)}</div>
+    <div class="phone ${data.extraClass || (DB.darkMode && ui.role !== 'operator' && ui.role !== 'tpv' && ui.role !== 'dispatcher' ? 'dark' : '')}">
+      <div class="phone-screen">${html}</div>
     </div>`;
 
   // wire all [data-act]
@@ -2432,13 +2450,9 @@ function render() {
       act(name, params);
     });
   });
-  // screen-btn (tab bottom) jsou uvnitř, ale navíc top-level screen picker
-  renderScreensPicker();
 }
 
 // INIT
-renderRolePicker();
-renderScreensPicker();
 render();
 </script>
 </body>
