@@ -1,27 +1,21 @@
 {
   "expo": {
-    "name": "Výroba",
-    "slug": "production-app",
+    "name": "Aplikace pro výrobu",
+    "slug": "aplikace-pro-vyrobu",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "scheme": "production-app",
+    "scheme": "aplikace-pro-vyrobu",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#1a56db"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yourcompany.productionapp"
+      "bundleIdentifier": "cz.lenous.aplikaceprovirobu"
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1a56db"
-      },
-      "package": "com.yourcompany.productionapp"
+      "package": "cz.lenous.aplikaceprovirobu"
     },
     "plugins": [
       "expo-router",

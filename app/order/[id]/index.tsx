@@ -194,7 +194,7 @@ export default function OrderDetailScreen() {
         {tab === 'documents' && (
           <View>
             {(profile?.role === 'dispatcher' || profile?.role === 'admin') && (
-              <TouchableOpacity style={styles.uploadBtn} onPress={() => router.push(`/order/${id}/upload`)}>
+              <TouchableOpacity style={styles.uploadBtn} onPress={() => router.push(`/order/${id}/upload` as any)}>
                 <Ionicons name="cloud-upload-outline" size={20} color="#1a56db" />
                 <Text style={styles.uploadBtnText}>Nahrát dokument</Text>
               </TouchableOpacity>
@@ -232,7 +232,7 @@ export default function OrderDetailScreen() {
 
         {tab === 'notes' && (
           <View>
-            <TouchableOpacity style={styles.uploadBtn} onPress={() => router.push(`/order/${id}/note`)}>
+            <TouchableOpacity style={styles.uploadBtn} onPress={() => router.push(`/order/${id}/note` as any)}>
               <Ionicons name="add-circle-outline" size={20} color="#1a56db" />
               <Text style={styles.uploadBtnText}>Přidat poznámku</Text>
             </TouchableOpacity>
