@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import {
   STATUS_CONFIG, PRIORITY_CONFIG, MACHINES,
-  SOLDERING_TYPES, DOC_TYPE_CONFIG, NOTE_TYPE_CONFIG,
+  SOLDERING_TYPES, DOC_TYPE_CONFIG, NOTE_TYPE_CONFIG, TECHNOLOGY_CONFIG, canManageOrders,
 } from '@/constants/stations';
 import type { OrderWithStations, Document, Note } from '@/lib/types';
 
@@ -69,7 +69,9 @@ export default function OrderDetailScreen() {
   }
 
   const prio = PRIORITY_CONFIG[order.priority];
+  const technology = TECHNOLOGY_CONFIG[order.technology ?? 'leadfree'];
   const machine = MACHINES.find(m => m.id === order.machine_id);
+  const canManage = canManageOrders(profile?.role);
   const sortedStations = [...order.order_stations].sort((a, b) => a.station_id - b.station_id);
 
   return (
@@ -84,6 +86,16 @@ export default function OrderDetailScreen() {
         <Text style={styles.orderName}>{order.name}</Text>
         {order.description ? <Text style={styles.orderDesc}>{order.description}</Text> : null}
         <View style={styles.orderMeta}>
+          <View style={[styles.metaChip, { backgroundColor: technology.bg }]}>
+            <Ionicons name="flash-outline" size={13} color={technology.color} />
+            <Text style={[styles.metaChipText, { color: technology.color }]}>{technology.label}</Text>
+          </View>
+          {order.stencil_number && (
+            <View style={styles.metaChip}>
+              <Ionicons name="barcode-outline" size={13} color="#6b7280" />
+              <Text style={styles.metaChipText}>Planžeta {order.stencil_number}</Text>
+            </View>
+          )}
           {machine && (
             <View style={styles.metaChip}>
               <Ionicons name="hardware-chip-outline" size={13} color="#1d4ed8" />
@@ -112,7 +124,7 @@ export default function OrderDetailScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {tab === 'stations' && (
           <View>
-            {(profile?.role === 'dispatcher' || profile?.role === 'admin') && (
+            {canManage && (
               <Text style={styles.hintTxt}>
                 Tip: dlouhý stisk stanoviště → zapnout/vypnout pro tuto zakázku
               </Text>
@@ -122,7 +134,7 @@ export default function OrderDetailScreen() {
               const isLast = idx === sortedStations.length - 1;
               const soldering = SOLDERING_TYPES.find(s => s.id === os.soldering_type);
               const notUsed = !os.applicable;
-              const canToggle = profile?.role === 'dispatcher' || profile?.role === 'admin';
+              const canToggle = canManage;
               return (
                 <TouchableOpacity
                   key={os.id}
@@ -193,7 +205,7 @@ export default function OrderDetailScreen() {
 
         {tab === 'documents' && (
           <View>
-            {(profile?.role === 'dispatcher' || profile?.role === 'admin') && (
+            {canManage && (
               <TouchableOpacity style={styles.uploadBtn} onPress={() => router.push(`/order/${id}/upload`)}>
                 <Ionicons name="cloud-upload-outline" size={20} color="#1a56db" />
                 <Text style={styles.uploadBtnText}>Nahrát dokument</Text>

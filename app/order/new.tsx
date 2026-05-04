@@ -8,17 +8,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import {
-  MACHINES, PRIORITY_CONFIG, PRODUCTION_TYPE_CONFIG, generateOrderNumber,
+  MACHINES, PRIORITY_CONFIG, PRODUCTION_TYPE_CONFIG, TECHNOLOGY_CONFIG, generateOrderNumber,
 } from '@/constants/stations';
 import {
   searchCustomers, getOrCreateCustomer,
   searchProducts, getOrCreateProduct,
   listProductDocuments, copyProductDocsToOrder,
 } from '@/lib/catalog';
-import type { Priority, ProductionType, Customer, Product } from '@/lib/types';
+import type { Priority, ProductionType, Customer, Product, Technology } from '@/lib/types';
 
 const PRIORITIES: Priority[] = ['low', 'normal', 'high', 'urgent'];
 const PRODUCTION_TYPES: ProductionType[] = ['new', 'repeat', 'revision'];
+const TECHNOLOGIES: Technology[] = ['leadfree', 'lead'];
 
 export default function NewOrderScreen() {
   const { user } = useAuth();
@@ -27,6 +28,8 @@ export default function NewOrderScreen() {
   // Základní
   const [orderNumber, setOrderNumber] = useState(generateOrderNumber());
   const [productionType, setProductionType] = useState<ProductionType>('new');
+  const [technology, setTechnology] = useState<Technology>('leadfree');
+  const [stencilNumber, setStencilNumber] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -140,6 +143,8 @@ export default function NewOrderScreen() {
         name: name.trim() || prod.name,
         description: description.trim() || null,
         production_type: productionType,
+        technology,
+        stencil_number: productionType === 'repeat' ? stencilNumber.trim() || null : null,
         quantity: qty,
         priority,
         order_date: parsedOrder,
@@ -217,6 +222,37 @@ export default function NewOrderScreen() {
             onChangeText={(t) => setQuantity(t.replace(/[^0-9]/g, ''))}
           />
         </Field>
+
+        <Field label="Technologie *">
+          <View style={styles.chipRow}>
+            {TECHNOLOGIES.map((t) => {
+              const cfg = TECHNOLOGY_CONFIG[t];
+              const sel = technology === t;
+              return (
+                <TouchableOpacity
+                  key={t}
+                  onPress={() => setTechnology(t)}
+                  style={[styles.chip, sel && { backgroundColor: cfg.color, borderColor: cfg.color }]}
+                >
+                  <Text style={[styles.chipText, sel && { color: '#fff' }]}>{cfg.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Field>
+
+        {productionType === 'repeat' && (
+          <Field label="Číslo planžety">
+            <TextInput
+              style={styles.input}
+              placeholder="např. PL-1427"
+              placeholderTextColor="#9ca3af"
+              value={stencilNumber}
+              onChangeText={setStencilNumber}
+              autoCapitalize="characters"
+            />
+          </Field>
+        )}
       </Section>
 
       <Section title="Zákazník">

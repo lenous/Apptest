@@ -4,6 +4,7 @@ export type Role = 'operator' | 'tpv' | 'dispatcher' | 'management' | 'admin';
 export type StationStatus = 'waiting' | 'in_progress' | 'completed' | 'issue' | 'skipped';
 export type Priority = 'low' | 'normal' | 'high' | 'urgent';
 export type ProductionType = 'new' | 'repeat' | 'revision';
+export type Technology = 'lead' | 'leadfree';
 export type DocType = 'bom' | 'drawing' | 'routing_sheet' | 'other';
 export type NoteType = 'note' | 'change_request' | 'issue';
 export type SolderingType = 'vlna' | 'selektivni' | 'rucni';
@@ -92,6 +93,8 @@ export type Database = {
           name: string;
           description: string | null;
           production_type: ProductionType;
+          technology: Technology;
+          stencil_number: string | null;
           quantity: number;
           priority: Priority;
           order_date: string | null;

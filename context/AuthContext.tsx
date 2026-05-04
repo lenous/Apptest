@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import type { Profile } from '@/lib/types';
+import type { Profile, Role } from '@/lib/types';
 
 type AuthContextType = {
   session: Session | null;
@@ -10,6 +10,7 @@ type AuthContextType = {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  switchPreviewRole: (role: Role) => void;
 };
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -17,6 +18,7 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [previewRole, setPreviewRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .select('*')
       .eq('id', userId)
       .single();
-    if (data) setProfile(data);
+    if (data) setProfile(previewRole ? { ...data, role: previewRole } : data);
   }
 
   async function signIn(email: string, password: string) {
@@ -50,14 +52,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signOut() {
+    setPreviewRole(null);
     await supabase.auth.signOut();
   }
 
+  function switchPreviewRole(role: Role) {
+    setPreviewRole(role);
+    const base = profile ?? createPreviewProfile(session?.user.id ?? 'preview-user');
+    setProfile({ ...base, role });
+  }
+
   return (
-    <AuthContext.Provider value={{ session, user: session?.user ?? null, profile, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, user: session?.user ?? null, profile, loading, signIn, signOut, switchPreviewRole }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
 export const useAuth = () => useContext(AuthContext);
+
+function createPreviewProfile(id: string): Profile {
+  return {
+    id,
+    full_name: 'Preview uživatel',
+    role: 'operator',
+    pin_code: null,
+    default_station: 3,
+    qualifications: ['aoi', 'oprava_aoi', 'vystupni_kontrola'],
+    push_token: null,
+    dark_mode: false,
+    created_at: new Date().toISOString(),
+  };
+}

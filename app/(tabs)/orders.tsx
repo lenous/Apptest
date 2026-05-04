@@ -7,11 +7,14 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
-import { PRIORITY_CONFIG, PRODUCTION_TYPE_CONFIG, computeDeadlineState, DEADLINE_CONFIG } from '@/constants/stations';
+import {
+  PRIORITY_CONFIG, PRODUCTION_TYPE_CONFIG, TECHNOLOGY_CONFIG,
+  computeDeadlineState, DEADLINE_CONFIG, canManageOrders,
+} from '@/constants/stations';
 import type { Order, OrderStation, Customer, Product } from '@/lib/types';
 
 type OrderRow = Order & {
-  order_stations: Pick<OrderStation, 'status'>[];
+  order_stations: Pick<OrderStation, 'status' | 'station_id' | 'applicable'>[];
   customers: Pick<Customer, 'name'> | null;
   products: Pick<Product, 'code' | 'name'> | null;
 };
@@ -21,7 +24,7 @@ type Filter = 'active' | 'hidden' | 'all';
 export default function OrdersScreen() {
   const { profile } = useAuth();
   const router = useRouter();
-  const canManageOrders = profile?.role === 'dispatcher' || profile?.role === 'management' || profile?.role === 'admin';
+  const canManage = canManageOrders(profile?.role);
 
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [search, setSearch] = useState('');
@@ -32,7 +35,7 @@ export default function OrdersScreen() {
   const fetchOrders = useCallback(async () => {
     let q = supabase
       .from('orders')
-      .select('*, customers(name), products(code,name), order_stations(status)')
+      .select('*, customers(name), products(code,name), order_stations(status,station_id,applicable)')
       .order('created_at', { ascending: false })
       .limit(200);
     if (filter === 'active') q = q.is('hidden_at', null);
@@ -48,15 +51,18 @@ export default function OrdersScreen() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return orders;
-    return orders.filter((o) =>
+    const visible = profile?.role === 'operator' && profile.default_station
+      ? orders.filter((o) => o.order_stations.some((s) => s.station_id === profile.default_station && s.applicable !== false))
+      : orders;
+    if (!q) return visible;
+    return visible.filter((o) =>
       o.order_number.toLowerCase().includes(q) ||
       o.name.toLowerCase().includes(q) ||
       o.customers?.name?.toLowerCase().includes(q) ||
       o.products?.code?.toLowerCase().includes(q) ||
       o.products?.name?.toLowerCase().includes(q)
     );
-  }, [search, orders]);
+  }, [search, orders, profile?.role, profile?.default_station]);
 
   function getStatusLabel(o: OrderRow): { text: string; color: string } {
     const s = o.order_stations.map((x) => x.status);
@@ -126,6 +132,7 @@ export default function OrdersScreen() {
         renderItem={({ item }) => {
           const prio = PRIORITY_CONFIG[item.priority];
           const ptype = PRODUCTION_TYPE_CONFIG[item.production_type];
+          const technology = TECHNOLOGY_CONFIG[item.technology ?? 'leadfree'];
           const status = getStatusLabel(item);
           const hasIssue = item.order_stations.some((s) => s.status === 'issue');
           const dState = computeDeadlineState(item.due_date);
@@ -135,7 +142,7 @@ export default function OrdersScreen() {
             <TouchableOpacity
               style={[styles.row, { borderLeftWidth: 3, borderLeftColor: hasIssue ? '#ef4444' : dCfg.border }]}
               onPress={() => router.push(`/order/${item.id}`)}
-              onLongPress={() => canManageOrders && Alert.alert(
+              onLongPress={() => canManage && Alert.alert(
                 item.hidden_at ? 'Obnovit zakázku?' : 'Skrýt zakázku?',
                 `${item.order_number} · ${item.name}`,
                 [
@@ -149,6 +156,9 @@ export default function OrdersScreen() {
                   <Text style={styles.rowNumber}>{item.order_number}</Text>
                   <View style={[styles.ptypeBadge, { backgroundColor: ptype.bg }]}>
                     <Text style={[styles.ptypeTxt, { color: ptype.color }]}>{ptype.label}</Text>
+                  </View>
+                  <View style={[styles.ptypeBadge, { backgroundColor: technology.bg }]}>
+                    <Text style={[styles.ptypeTxt, { color: technology.color }]}>{technology.label}</Text>
                   </View>
                 </View>
                 <Text style={styles.rowName} numberOfLines={1}>
@@ -183,7 +193,7 @@ export default function OrdersScreen() {
         }
       />
 
-      {canManageOrders && (
+      {canManage && (
         <TouchableOpacity style={styles.fab} onPress={() => router.push('/order/new')}>
           <Ionicons name="add" size={28} color="#fff" />
         </TouchableOpacity>

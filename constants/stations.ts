@@ -1,4 +1,4 @@
-import type { StationStatus, ProductionType, DeadlineState, NotifType, BomStatus, NotifPriority } from '@/lib/types';
+import type { StationStatus, ProductionType, DeadlineState, NotifType, BomStatus, NotifPriority, Role, Technology } from '@/lib/types';
 
 export const STATIONS = [
   { id: 1,  name: 'Sklad' },
@@ -35,6 +35,27 @@ export const PRODUCTION_TYPE_CONFIG: Record<ProductionType, { label: string; col
   repeat:   { label: 'Opakovaná', color: '#15803d', bg: '#dcfce7' },
   revision: { label: 'Revize',    color: '#b45309', bg: '#fef3c7' },
 };
+
+export const TECHNOLOGY_CONFIG: Record<Technology, { label: string; color: string; bg: string }> = {
+  lead:     { label: 'OLOVO',    color: '#92400e', bg: '#fef3c7' },
+  leadfree: { label: 'BEZOLOVO', color: '#15803d', bg: '#dcfce7' },
+};
+
+export const ROLE_CONFIG: Record<Role, { label: string; shortLabel: string; color: string; bg: string }> = {
+  operator:   { label: 'Operátor',      shortLabel: 'Operátor', color: '#1d4ed8', bg: '#dbeafe' },
+  tpv:        { label: 'TPV',           shortLabel: 'TPV',      color: '#0f766e', bg: '#ccfbf1' },
+  dispatcher: { label: 'Mistr',         shortLabel: 'Mistr',    color: '#b45309', bg: '#fef3c7' },
+  management: { label: 'Vedení',        shortLabel: 'Vedení',   color: '#4338ca', bg: '#e0e7ff' },
+  admin:      { label: 'Administrátor', shortLabel: 'Admin',    color: '#b91c1c', bg: '#fee2e2' },
+};
+
+export function canManageOrders(role?: Role | null): boolean {
+  return role === 'dispatcher' || role === 'management' || role === 'admin';
+}
+
+export function canUseAdmin(role?: Role | null): boolean {
+  return role === 'admin';
+}
 
 export const STATUS_CONFIG: Record<StationStatus, { label: string; color: string; bg: string }> = {
   waiting:     { label: 'Čeká',       color: '#6b7280', bg: '#f3f4f6' },

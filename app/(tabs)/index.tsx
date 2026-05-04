@@ -9,11 +9,11 @@ import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import {
-  PRIORITY_CONFIG, STATUS_CONFIG, STATIONS, DEADLINE_CONFIG, computeDeadlineState,
+  PRIORITY_CONFIG, STATUS_CONFIG, STATIONS, DEADLINE_CONFIG, computeDeadlineState, canManageOrders,
 } from '@/constants/stations';
 import type { OrderWithStations } from '@/lib/types';
 
-type Filter = 'active' | 'hidden' | 'all';
+type Filter = 'active' | 'issues' | 'overdue' | 'hidden' | 'all';
 
 export default function DashboardScreen() {
   const { profile } = useAuth();
@@ -57,13 +57,25 @@ export default function DashboardScreen() {
 
   const stats = useMemo(() => {
     let inProgress = 0, issues = 0, overdue = 0;
-    for (const o of orders) {
+    const scope = profile?.role === 'operator' && profile.default_station
+      ? orders.filter((o) => o.order_stations.some((s) => s.station_id === profile.default_station && s.applicable !== false))
+      : orders;
+    for (const o of scope) {
       if (o.order_stations.some((s) => s.status === 'in_progress')) inProgress++;
       if (o.order_stations.some((s) => s.status === 'issue')) issues++;
       if (computeDeadlineState(o.due_date) === 'overdue') overdue++;
     }
-    return { total: orders.length, inProgress, issues, overdue };
-  }, [orders]);
+    return { total: scope.length, inProgress, issues, overdue };
+  }, [orders, profile?.role, profile?.default_station]);
+
+  const visibleOrders = useMemo(() => {
+    const byRole = profile?.role === 'operator' && profile.default_station
+      ? orders.filter((o) => o.order_stations.some((s) => s.station_id === profile.default_station && s.applicable !== false))
+      : orders;
+    if (filter === 'issues') return byRole.filter((o) => o.order_stations.some((s) => s.status === 'issue'));
+    if (filter === 'overdue') return byRole.filter((o) => computeDeadlineState(o.due_date) === 'overdue');
+    return byRole;
+  }, [orders, filter, profile?.role, profile?.default_station]);
 
   if (loading) {
     return (
@@ -83,7 +95,7 @@ export default function DashboardScreen() {
       )}
 
       <FlatList
-        data={orders}
+        data={visibleOrders}
         keyExtractor={(item) => item.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchOrders(); }} />}
         contentContainerStyle={styles.list}
@@ -91,23 +103,23 @@ export default function DashboardScreen() {
           <View>
             <View style={styles.header}>
               <Text style={styles.greeting}>Přehled výroby</Text>
-              <Text style={styles.count}>{orders.length} zakázek</Text>
+              <Text style={styles.count}>{visibleOrders.length} zakázek</Text>
             </View>
             <View style={styles.statsRow}>
-              <Stat label="Aktivních" value={stats.inProgress} color="#1d4ed8" />
-              <Stat label="Problém" value={stats.issues} color="#b91c1c" />
-              <Stat label="Po termínu" value={stats.overdue} color="#d97706" />
-              <Stat label="Celkem" value={stats.total} color="#111827" />
+              <Stat label="Aktivních" value={stats.inProgress} color="#1d4ed8" onPress={() => setFilter('active')} />
+              <Stat label="Problém" value={stats.issues} color="#b91c1c" onPress={() => setFilter('issues')} />
+              <Stat label="Po termínu" value={stats.overdue} color="#d97706" onPress={() => setFilter('overdue')} />
+              <Stat label="Celkem" value={stats.total} color="#111827" onPress={() => setFilter('all')} />
             </View>
             <View style={styles.filterRow}>
-              {(['active', 'hidden', 'all'] as Filter[]).map((f) => (
+              {(['active', 'issues', 'overdue', 'hidden', 'all'] as Filter[]).map((f) => (
                 <TouchableOpacity
                   key={f}
                   style={[styles.filterChip, filter === f && styles.filterChipActive]}
                   onPress={() => setFilter(f)}
                 >
                   <Text style={[styles.filterChipTxt, filter === f && styles.filterChipTxtActive]}>
-                    {f === 'active' ? 'Aktivní' : f === 'hidden' ? 'Skryté' : 'Vše'}
+                    {f === 'active' ? 'Aktivní' : f === 'issues' ? 'Problémy' : f === 'overdue' ? 'Po termínu' : f === 'hidden' ? 'Skryté' : 'Vše'}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -190,7 +202,7 @@ export default function DashboardScreen() {
         }
       />
 
-      {(profile?.role === 'dispatcher' || profile?.role === 'management' || profile?.role === 'admin') && (
+      {canManageOrders(profile?.role) && (
         <TouchableOpacity style={styles.fab} onPress={() => router.push('/order/new')}>
           <Ionicons name="add" size={28} color="#fff" />
         </TouchableOpacity>
@@ -199,12 +211,12 @@ export default function DashboardScreen() {
   );
 }
 
-function Stat({ label, value, color }: { label: string; value: number; color: string }) {
+function Stat({ label, value, color, onPress }: { label: string; value: number; color: string; onPress: () => void }) {
   return (
-    <View style={styles.stat}>
+    <TouchableOpacity style={styles.stat} onPress={onPress}>
       <Text style={[styles.statValue, { color }]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 

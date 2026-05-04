@@ -116,6 +116,9 @@ CREATE TABLE public.orders (
   description      TEXT,
   production_type  TEXT NOT NULL DEFAULT 'new'
                      CHECK (production_type IN ('new', 'repeat', 'revision')),
+  technology       TEXT NOT NULL DEFAULT 'leadfree'
+                     CHECK (technology IN ('lead', 'leadfree')),
+  stencil_number   TEXT,
   quantity         INT NOT NULL DEFAULT 1 CHECK (quantity > 0),
   priority         TEXT NOT NULL DEFAULT 'normal'
                      CHECK (priority IN ('low', 'normal', 'high', 'urgent')),

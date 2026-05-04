@@ -1,7 +1,12 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '@/context/AuthContext';
 
 export default function TabsLayout() {
+  const { profile } = useAuth();
+  const isOperator = profile?.role === 'operator';
+  const isAdmin = profile?.role === 'admin';
+
   return (
     <Tabs
       screenOptions={{
@@ -23,6 +28,7 @@ export default function TabsLayout() {
         name="my-station"
         options={{
           title: 'Mé stanoviště',
+          href: isOperator ? undefined : null,
           tabBarIcon: ({ color, size }) => <Ionicons name="briefcase-outline" size={size} color={color} />,
         }}
       />
@@ -38,6 +44,14 @@ export default function TabsLayout() {
         options={{
           title: 'Notifikace',
           tabBarIcon: ({ color, size }) => <Ionicons name="notifications-outline" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="admin-users"
+        options={{
+          title: 'Uživatelé',
+          href: isAdmin ? undefined : null,
+          tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen

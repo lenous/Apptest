@@ -327,7 +327,7 @@ function CountField({ label, value, onChange, color }: {
   return (
     <View style={[styles.countCard, { borderColor: color + '66' }]}>
       <Text style={[styles.countLabel, { color }]}>{label}</Text>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+      <View style={styles.countControl}>
         <TouchableOpacity onPress={() => onChange(String(Math.max(0, (parseInt(value, 10) || 0) - 1)))} style={styles.countBtn}>
           <Ionicons name="remove" size={18} color={color} />
         </TouchableOpacity>
@@ -412,15 +412,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#dbeafe', padding: 10, borderRadius: 8,
   },
   waveTxt: { fontSize: 13, color: '#1d4ed8' },
-  countRow: { flexDirection: 'row', gap: 8 },
+  countRow: { flexDirection: 'row', gap: 6 },
   countCard: {
     flex: 1, backgroundColor: '#fff', borderRadius: 10,
-    padding: 10, borderWidth: 1.5, alignItems: 'center',
+    padding: 8, borderWidth: 1.5, alignItems: 'center', minWidth: 0,
   },
   countLabel: { fontSize: 11, fontWeight: '700', marginBottom: 6, textTransform: 'uppercase' },
-  countValue: { fontSize: 22, fontWeight: '700', minWidth: 40, textAlign: 'center', padding: 0 },
+  countControl: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 },
+  countValue: { fontSize: 17, fontWeight: '700', minWidth: 30, maxWidth: 42, textAlign: 'center', padding: 0 },
   countBtn: {
-    width: 28, height: 28, borderRadius: 14, backgroundColor: '#f3f4f6',
+    width: 26, height: 28, borderRadius: 8, backgroundColor: '#f3f4f6',
     alignItems: 'center', justifyContent: 'center',
   },
   countSaveBtn: {
