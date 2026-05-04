@@ -7,7 +7,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:pages": "expo export --platform web --output-dir docs && node scripts/prepare-github-pages.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.0",
