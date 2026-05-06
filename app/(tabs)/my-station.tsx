@@ -12,6 +12,34 @@ import {
 } from '@/constants/stations';
 import type { OrderStation, StationStatus } from '@/lib/types';
 
+// Mapování kvalifikace na station ID
+const QUAL_TO_STATION: Record<string, number[]> = {
+  sklad: [1],
+  automat: [2],
+  aoi: [3],
+  rtg: [4],
+  oprava_aoi: [5],
+  osazovani: [6],
+  pajeni_vlna: [7],
+  pajeni_selektivni: [7],
+  pajeni_rucni: [7],
+  oprava_pajeni: [8],
+  programovani: [9],
+  lakovani: [10],
+  vystupni_kontrola: [11],
+  baleni: [12],
+};
+
+function getQualifiedStationIds(qualifications: string[] | null | undefined): number[] {
+  if (!qualifications || qualifications.length === 0) return STATIONS.map((s) => s.id);
+  const ids = new Set<number>();
+  for (const q of qualifications) {
+    const stationIds = QUAL_TO_STATION[q] ?? [];
+    stationIds.forEach((id) => ids.add(id));
+  }
+  return Array.from(ids).sort((a, b) => a - b);
+}
+
 type Row = OrderStation & {
   orders: {
     id: string;
@@ -34,9 +62,19 @@ export default function MyStationScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Filtruj stanoviště podle kvalifikací operátora
+  const qualifiedStationIds = getQualifiedStationIds(profile?.qualifications);
+  const visibleStations = STATIONS.filter((s) => qualifiedStationIds.includes(s.id));
+
   useEffect(() => {
-    setStationId(profile?.default_station ?? 1);
-  }, [profile?.default_station]);
+    // Nastav výchozí stanoviště: buď profile.default_station, nebo první kvalifikované
+    const defaultId = profile?.default_station;
+    if (defaultId && qualifiedStationIds.includes(defaultId)) {
+      setStationId(defaultId);
+    } else if (visibleStations.length > 0) {
+      setStationId(visibleStations[0].id);
+    }
+  }, [profile?.default_station, profile?.qualifications]);
 
   const fetchQueue = useCallback(async () => {
     if (!stationId) return;
@@ -92,26 +130,29 @@ export default function MyStationScreen() {
         </View>
       </View>
 
-      <View style={styles.stationPicker}>
-        <Text style={styles.pickerLabel}>Přepnout stanoviště:</Text>
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={STATIONS}
-          keyExtractor={(s) => String(s.id)}
-          contentContainerStyle={{ gap: 6, paddingRight: 12 }}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[styles.stChip, stationId === item.id && styles.stChipActive]}
-              onPress={() => setStationId(item.id)}
-            >
-              <Text style={[styles.stChipTxt, stationId === item.id && styles.stChipTxtActive]}>
-                {item.id}. {item.name}
-              </Text>
-            </TouchableOpacity>
-          )}
-        />
-      </View>
+      {/* Přepínač stanovišť – jen ta, na která má operátor kvalifikaci */}
+      {visibleStations.length > 1 && (
+        <View style={styles.stationPicker}>
+          <Text style={styles.pickerLabel}>Přepnout stanoviště:</Text>
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={visibleStations}
+            keyExtractor={(s) => String(s.id)}
+            contentContainerStyle={{ gap: 6, paddingRight: 12 }}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[styles.stChip, stationId === item.id && styles.stChipActive]}
+                onPress={() => setStationId(item.id)}
+              >
+                <Text style={[styles.stChipTxt, stationId === item.id && styles.stChipTxtActive]}>
+                  {item.id}. {item.name}
+                </Text>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      )}
 
       <FlatList
         data={rows}

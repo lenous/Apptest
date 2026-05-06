@@ -1,32 +1,43 @@
 {
   "expo": {
-    "name": "Aplikace pro výrobu",
-    "slug": "aplikace-pro-vyrobu",
+    "name": "Výroba",
+    "slug": "production-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "aplikace-pro-vyrobu",
+    "icon": "./assets/icon.png",
+    "scheme": "production-app",
     "userInterfaceStyle": "light",
     "splash": {
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#1a56db"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "cz.lenous.aplikaceprovirobu"
+      "bundleIdentifier": "com.yourcompany.productionapp",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Aplikace Výroba používá Face ID pro rychlý přístup."
+      }
     },
     "android": {
-      "package": "cz.lenous.aplikaceprovirobu"
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1a56db"
+      },
+      "package": "com.yourcompany.productionapp"
     },
     "plugins": [
       "expo-router",
       "expo-secure-store",
       [
         "expo-document-picker",
-        { "iCloudContainerEnvironment": "Production" }
-      ]
+        {
+          "iCloudContainerEnvironment": "Production"
+        }
+      ],
+      "expo-local-authentication"
     ],
     "experiments": {
-      "baseUrl": "/Apptest",
       "typedRoutes": true
     }
   }

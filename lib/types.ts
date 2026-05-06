@@ -118,6 +118,7 @@ export type Database = {
           qty_ok: number;
           qty_rework: number;
           qty_scrap: number;
+          qty_received: number;
           started_at: string | null;
           completed_at: string | null;
           operator_id: string | null;
