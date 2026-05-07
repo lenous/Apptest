@@ -22,6 +22,7 @@ import {
   canEditOrders,
   canHardDeleteOrders,
   canOperate,
+  cappedStationCount,
   checklistForStation,
   createDefaultDb,
   currentUser,
@@ -112,6 +113,10 @@ const rolePermissions: Record<Role, string[]> = {
   management: ['Přehled výroby', 'Zakázky', 'KPI', 'Zápis kusů'],
   admin: ['Kompletní práva', 'Uživatelé a role', 'Nastavení', 'Audit log', 'Mazání', 'Všechny obrazovky'],
 };
+
+function canEditAutomatProgram(role: Role, quals: string[]) {
+  return role === 'dispatcher' || role === 'management' || role === 'admin' || (role === 'operator' && quals.includes('automat'));
+}
 
 function parseQtyInput(value: string) {
   const digits = value.replace(/\D/g, '');
@@ -274,8 +279,20 @@ export default function ProductionApp() {
       const order = draft.orders.find((item) => item.id === orderId);
       if (!order) return;
       const station = order.stations[stationId];
-      station[field] = Math.max(0, value);
+      station[field] = cappedStationCount(order, stationId, field, value);
       pushAudit(draft, draft.sessionUserId, `${order.number} · Počty`, `${stationById(stationId)?.name}: ${field} = ${station[field]}`);
+    });
+  }
+
+  function setAutomatProgram(orderId: string, value: string) {
+    if (!canEditAutomatProgram(user.role, user.quals)) {
+      showToast('Program automatu může upravit operátor automatu, mistr, vedení nebo admin');
+      return;
+    }
+    updateDb((draft) => {
+      const order = draft.orders.find((item) => item.id === orderId);
+      if (!order) return;
+      order.automatProgram = value;
     });
   }
 
@@ -669,6 +686,7 @@ export default function ProductionApp() {
     const processed = station.ok + station.rework + station.scrap;
     const remaining = Math.max(0, arrived - processed);
     const nextStation = nextApplicableStation(order, stationId);
+    const canEditProgram = canEditAutomatProgram(user.role, user.quals);
 
     if (!station?.applicable) {
       return (
@@ -743,6 +761,18 @@ export default function ProductionApp() {
                 />
               ))}
             </View>
+            <View style={styles.formField}>
+              <Text style={styles.label}>Program automatu</Text>
+              <TextInput
+                style={[styles.input, !canEditProgram && styles.inputDisabled]}
+                value={order.automatProgram ?? ''}
+                placeholder="Zadej název programu..."
+                placeholderTextColor="#64748b"
+                editable={canEditProgram}
+                onChangeText={(value) => setAutomatProgram(order.id, value)}
+              />
+              {!canEditProgram && <Text style={styles.muted}>Program může měnit operátor automatu, mistr, vedení nebo admin.</Text>}
+            </View>
           </Section>
         )}
 
@@ -763,10 +793,11 @@ export default function ProductionApp() {
 
         <Section title="Zapsat kusy">
           <View style={styles.countGrid}>
-            <CountBox label="OK" color="#15803d" value={station.ok} onChange={(value) => setOrderStationCount(order.id, stationId, 'ok', value)} />
-            <CountBox label="Oprava" color="#d97706" value={station.rework} onChange={(value) => setOrderStationCount(order.id, stationId, 'rework', value)} />
-            <CountBox label="Zmetek" color="#b91c1c" value={station.scrap} onChange={(value) => setOrderStationCount(order.id, stationId, 'scrap', value)} />
+            <CountBox label="OK" color="#15803d" value={station.ok} max={cappedStationCount(order, stationId, 'ok', arrived)} onChange={(value) => setOrderStationCount(order.id, stationId, 'ok', value)} />
+            <CountBox label="Oprava" color="#d97706" value={station.rework} max={cappedStationCount(order, stationId, 'rework', arrived)} onChange={(value) => setOrderStationCount(order.id, stationId, 'rework', value)} />
+            <CountBox label="Zmetek" color="#b91c1c" value={station.scrap} max={cappedStationCount(order, stationId, 'scrap', arrived)} onChange={(value) => setOrderStationCount(order.id, stationId, 'scrap', value)} />
           </View>
+          <Text style={styles.tiny}>Součet OK, oprava a zmetek nesmí překročit {arrived} ks doručených na stanoviště.</Text>
           {processed > arrived && <Text style={styles.errorText}>Zapsáno je víc kusů, než na stanoviště dorazilo.</Text>}
         </Section>
 
@@ -1556,7 +1587,7 @@ function Progress({ percent }: { percent: number }) {
   );
 }
 
-function CountBox({ label, value, color, onChange }: { label: string; value: number; color: string; onChange: (value: number) => void }) {
+function CountBox({ label, value, max, color, onChange }: { label: string; value: number; max: number; color: string; onChange: (value: number) => void }) {
   return (
     <View style={styles.countBox}>
       <TextInput
@@ -1564,9 +1595,11 @@ function CountBox({ label, value, color, onChange }: { label: string; value: num
         value={String(value)}
         onChangeText={(text) => onChange(parseQtyInput(text))}
         keyboardType="number-pad"
+        accessibilityLabel={`${label} počet`}
         selectTextOnFocus
       />
       <Text style={styles.countLabel}>{label}</Text>
+      <Text style={styles.countLimit}>max {max}</Text>
       <View style={styles.countControls}>
         <TouchableOpacity style={styles.countButton} onPress={() => onChange(value - 1)}><Text style={styles.countButtonText}>-</Text></TouchableOpacity>
         <TouchableOpacity style={styles.countButton} onPress={() => onChange(value + 1)}><Text style={styles.countButtonText}>+</Text></TouchableOpacity>
@@ -1714,6 +1747,7 @@ const styles = StyleSheet.create({
   countValue: { fontSize: 24, fontWeight: '900' },
   countInput: { width: '100%', minHeight: 40, padding: 0, fontSize: 24, fontWeight: '900', textAlign: 'center' },
   countLabel: { fontSize: 11, color: '#94a3b8', fontWeight: '900', textTransform: 'uppercase' },
+  countLimit: { color: '#64748b', fontSize: 9, fontWeight: '800', marginTop: 2 },
   countControls: { flexDirection: 'row', gap: 8, marginTop: 9 },
   countButton: { width: 34, height: 30, borderRadius: 8, backgroundColor: '#102f35', alignItems: 'center', justifyContent: 'center' },
   countButtonText: { fontSize: 18, fontWeight: '900', color: '#E6C336' },
@@ -1733,6 +1767,7 @@ const styles = StyleSheet.create({
   iconButton: { width: 34, height: 34, borderRadius: 9, backgroundColor: '#102f35', alignItems: 'center', justifyContent: 'center' },
   iconButtonDanger: { backgroundColor: '#fee2e2' },
   input: { backgroundColor: '#071a1d', borderWidth: 1, borderColor: '#1D5B66', borderRadius: 10, minHeight: 43, paddingHorizontal: 12, fontSize: 15, color: '#fff' },
+  inputDisabled: { opacity: 0.62 },
   textArea: { minHeight: 76, paddingTop: 10, textAlignVertical: 'top' },
   formField: { marginTop: 12 },
   label: { color: '#36B0AE', fontSize: 12, fontWeight: '900', marginBottom: 5 },

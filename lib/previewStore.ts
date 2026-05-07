@@ -54,6 +54,7 @@ export type Order = {
   technology: Technology;
   stencilNumber: string;
   automat?: string;
+  automatProgram?: string;
   materialStatus?: MaterialStatus;
   materialNote?: string;
   hidden: boolean;
@@ -85,7 +86,7 @@ export type PreviewDb = {
   darkMode: boolean;
 };
 
-export const STORAGE_KEY = 'aplikace-pro-vyrobu-preview-v5';
+export const STORAGE_KEY = 'aplikace-pro-vyrobu-preview-v6';
 
 export const STATIONS: StationDef[] = [
   { id: 1, name: 'Sklad', qual: 'sklad' },
@@ -331,6 +332,16 @@ export function forwardedFrom(order: Order, stationId: number) {
   return order.transfers.filter((transfer) => transfer.from === stationId).reduce((sum, transfer) => sum + transfer.qty, 0);
 }
 
+export function cappedStationCount(order: Order, stationId: number, field: 'ok' | 'rework' | 'scrap', value: number) {
+  const station = order.stations[stationId];
+  if (!station) return 0;
+  const arrived = arrivedAt(order, stationId);
+  const other = (field === 'ok' ? 0 : station.ok)
+    + (field === 'rework' ? 0 : station.rework)
+    + (field === 'scrap' ? 0 : station.scrap);
+  return Math.min(Math.max(0, value), Math.max(0, arrived - other));
+}
+
 export function nextApplicableStation(order: Order, from: number) {
   for (let id = from + 1; id <= 12; id += 1) {
     if (order.stations[id]?.applicable) return id;
@@ -372,7 +383,7 @@ export function nowLabel() {
 export function checklistForStation(stationId: number) {
   const custom: Record<number, string[]> = {
     1: ['Materiál vychystán', 'Šarže zkontrolována', 'Materiál předán dál'],
-    2: ['Program automatu vybrán', 'První kus zkontrolován', 'Počty zapsané'],
+    2: ['Program automatu zapsán', 'První kus zkontrolován', 'RTG kontrola provedena', 'Počty zapsané'],
     3: ['AOI program spuštěn', 'Podezřelé kusy odděleny', 'Výsledek zapsán'],
     7: ['Program vlny ověřen', 'Teplota a flux OK', 'Vzorek po pájení zkontrolován'],
     12: ['Štítek vytištěn', 'Počet balení sedí', 'Zakázka připravena k expedici', 'Fotka balení přiložena'],
@@ -406,9 +417,22 @@ function normalizeDb(db: PreviewDb): PreviewDb {
         checklist: [],
       }, existing ?? {});
     }
-    return { ...order, stations, transfers: order.transfers ?? [], notes: order.notes ?? [], hidden: !!order.hidden };
+    const normalized = { ...order, stations, transfers: order.transfers ?? [], notes: order.notes ?? [], hidden: !!order.hidden, automatProgram: order.automatProgram ?? '' };
+    clampOrderStationCounts(normalized);
+    return normalized;
   });
   return merged;
+}
+
+function clampOrderStationCounts(order: Order) {
+  for (const stationDef of STATIONS) {
+    const station = order.stations[stationDef.id];
+    if (!station) continue;
+    const arrived = arrivedAt(order, stationDef.id);
+    station.ok = Math.min(Math.max(0, station.ok), arrived);
+    station.rework = Math.min(Math.max(0, station.rework), Math.max(0, arrived - station.ok));
+    station.scrap = Math.min(Math.max(0, station.scrap), Math.max(0, arrived - station.ok - station.rework));
+  }
 }
 
 type OrderSeed = Omit<Order, 'stations' | 'hidden' | 'notes'> & {
