@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { Session, User } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 import { supabase } from '@/lib/supabase';
@@ -7,6 +8,26 @@ import type { Profile } from '@/lib/types';
 const BIOMETRIC_ENABLED_KEY = 'biometric_enabled';
 const LAST_ACTIVE_KEY = 'last_active_at';
 const LOCK_TIMEOUT_MS = 8 * 60 * 60 * 1000; // 8 hodin
+
+const webStorage = {
+  getItem: (key: string) => Promise.resolve(globalThis.localStorage?.getItem(key) ?? null),
+  setItem: (key: string, value: string) => {
+    globalThis.localStorage?.setItem(key, value);
+    return Promise.resolve();
+  },
+  deleteItem: (key: string) => {
+    globalThis.localStorage?.removeItem(key);
+    return Promise.resolve();
+  },
+};
+
+const authStorage = Platform.OS === 'web'
+  ? webStorage
+  : {
+      getItem: SecureStore.getItemAsync,
+      setItem: SecureStore.setItemAsync,
+      deleteItem: SecureStore.deleteItemAsync,
+    };
 
 type AuthContextType = {
   session: Session | null;
@@ -77,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setBiometricAvailable(available);
 
       if (available) {
-        const enabled = await SecureStore.getItemAsync(BIOMETRIC_ENABLED_KEY);
+        const enabled = await authStorage.getItem(BIOMETRIC_ENABLED_KEY);
         setBiometricEnabledState(enabled === 'true');
       }
     } catch {
@@ -86,10 +107,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function checkLockStatus() {
-    const enabled = await SecureStore.getItemAsync(BIOMETRIC_ENABLED_KEY);
+    const enabled = await authStorage.getItem(BIOMETRIC_ENABLED_KEY);
     if (enabled !== 'true') return;
 
-    const lastActive = await SecureStore.getItemAsync(LAST_ACTIVE_KEY);
+    const lastActive = await authStorage.getItem(LAST_ACTIVE_KEY);
     if (lastActive) {
       const elapsed = Date.now() - parseInt(lastActive, 10);
       if (elapsed > LOCK_TIMEOUT_MS) {
@@ -120,7 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function signOut() {
     await supabase.auth.signOut();
-    await SecureStore.deleteItemAsync(LAST_ACTIVE_KEY);
+    await authStorage.deleteItem(LAST_ACTIVE_KEY);
   }
 
   async function unlockWithBiometrics(): Promise<boolean> {
@@ -146,12 +167,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function setBiometricEnabled(enabled: boolean) {
-    await SecureStore.setItemAsync(BIOMETRIC_ENABLED_KEY, enabled ? 'true' : 'false');
+    await authStorage.setItem(BIOMETRIC_ENABLED_KEY, enabled ? 'true' : 'false');
     setBiometricEnabledState(enabled);
   }
 
   function recordActivity() {
-    SecureStore.setItemAsync(LAST_ACTIVE_KEY, String(Date.now()));
+    authStorage.setItem(LAST_ACTIVE_KEY, String(Date.now()));
   }
 
   return (
