@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Customer, Product, ProductDocument } from './types';
+import type { Customer, Product, ProductDocument, TestFlow } from './types';
 
 // ── Zákazníci ──────────────────────────────────────────────────
 
@@ -58,8 +58,10 @@ export async function getOrCreateProduct(args: {
   name: string;
   revision?: string;
   waveProgram?: string;
+  selectiveWaveProgram?: string;
+  testFlow?: TestFlow;
 }): Promise<Product> {
-  const { customerId, code, name, revision, waveProgram } = args;
+  const { customerId, code, name, revision, waveProgram, selectiveWaveProgram, testFlow } = args;
   const trimmedCode = code.trim();
   if (!trimmedCode) throw new Error('Kód produktu je prázdný');
 
@@ -79,6 +81,8 @@ export async function getOrCreateProduct(args: {
       name: name.trim() || trimmedCode,
       revision: revision?.trim() || null,
       wave_program: waveProgram?.trim() || null,
+      selective_wave_program: selectiveWaveProgram?.trim() || null,
+      test_flow: testFlow ?? 'output_control',
     })
     .select('*')
     .single();

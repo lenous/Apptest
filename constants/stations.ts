@@ -1,4 +1,7 @@
-import type { StationStatus, ProductionType, DeadlineState, NotifType, BomStatus, NotifPriority } from '@/lib/types';
+import type {
+  StationStatus, ProductionType, DeadlineState, NotifType, BomStatus, NotifPriority,
+  ProductionEventType, ProductionEventResult, TestFlow,
+} from '@/lib/types';
 
 export const STATIONS = [
   { id: 1,  name: 'Sklad' },
@@ -13,6 +16,7 @@ export const STATIONS = [
   { id: 10, name: 'Lakování' },
   { id: 11, name: 'Výstupní kontrola' },
   { id: 12, name: 'Balení' },
+  { id: 13, name: 'Testování' },
 ] as const;
 
 export const MACHINES = [
@@ -29,6 +33,47 @@ export const SOLDERING_TYPES = [
   { id: 'selektivni', name: 'Selektivní' },
   { id: 'rucni',      name: 'Ruční' },
 ] as const;
+
+export const TEST_FLOW_CONFIG: Record<TestFlow, { label: string; description: string }> = {
+  none: { label: 'Bez testování', description: 'Produkt nemá samostatný testovací záznam.' },
+  output_control: { label: 'Ve výstupní kontrole', description: 'Test se zapisuje na stanovišti 11.' },
+  separate_station: { label: 'Samostatné testování', description: 'Testování má vlastní stanoviště 13.' },
+};
+
+export const PRODUCTION_EVENT_CONFIG: Record<ProductionEventType, { label: string; icon: string; color: string }> = {
+  aoi: { label: 'AOI', icon: 'scan-outline', color: '#7c3aed' },
+  manual_assembly: { label: 'Ruční osazení', icon: 'hand-left-outline', color: '#0f766e' },
+  soldering: { label: 'Pájení', icon: 'flame-outline', color: '#d97706' },
+  repair: { label: 'Oprava', icon: 'construct-outline', color: '#b91c1c' },
+  testing: { label: 'Testování', icon: 'speedometer-outline', color: '#1d4ed8' },
+  transfer: { label: 'Předání', icon: 'arrow-forward-circle-outline', color: '#4b5563' },
+  general: { label: 'Obecný záznam', icon: 'clipboard-outline', color: '#6b7280' },
+};
+
+export const PRODUCTION_RESULT_CONFIG: Record<ProductionEventResult, { label: string; color: string; bg: string }> = {
+  ok: { label: 'OK', color: '#15803d', bg: '#dcfce7' },
+  nok: { label: 'NOK', color: '#b91c1c', bg: '#fee2e2' },
+  partial: { label: 'Částečně', color: '#d97706', bg: '#fef3c7' },
+  pass: { label: 'PASS', color: '#15803d', bg: '#dcfce7' },
+  fail: { label: 'FAIL', color: '#b91c1c', bg: '#fee2e2' },
+  retest: { label: 'Retest', color: '#1d4ed8', bg: '#dbeafe' },
+  completed: { label: 'Dokončeno', color: '#15803d', bg: '#dcfce7' },
+};
+
+export function eventTypeForStation(stationId: number): ProductionEventType {
+  if (stationId === 3) return 'aoi';
+  if (stationId === 6) return 'manual_assembly';
+  if (stationId === 7) return 'soldering';
+  if (stationId === 5 || stationId === 8) return 'repair';
+  if (stationId === 11 || stationId === 13) return 'testing';
+  return 'general';
+}
+
+export function defaultResultForEvent(type: ProductionEventType): ProductionEventResult {
+  if (type === 'testing') return 'pass';
+  if (type === 'transfer' || type === 'general') return 'completed';
+  return 'ok';
+}
 
 export const PRODUCTION_TYPE_CONFIG: Record<ProductionType, { label: string; color: string; bg: string }> = {
   new:      { label: 'Nová',       color: '#1d4ed8', bg: '#dbeafe' },

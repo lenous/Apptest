@@ -5,9 +5,10 @@
 1. Jděte na [supabase.com](https://supabase.com) → **New project**
    - **Region: Frankfurt (EU Central)** nebo Londýn – kvůli NDA a GDPR vyberte **EU region**. Změna později není možná, musel by se založit nový projekt.
 2. Dashboard → **SQL Editor** → vložte obsah `supabase/schema.sql` → **Run**
+   - Pokud aktualizujete existující databázi, spusťte postupně migrace v `supabase/migration_v4.sql` a `supabase/migration_v5_traceability.sql`.
 3. Dashboard → **Authentication → Users** → vytvořte uživatele (email + heslo)
 4. V tabulce `profiles` nastavte role a doplňte:
-   - `role` – `operator` / `dispatcher` / `admin`
+   - `role` – `operator` / `tpv` / `dispatcher` / `management` / `admin`
    - `pin_code` – 4-místný PIN pro přihlášení na sdíleném tabletu
    - `default_station` – ID výchozího stanoviště (1–12) pro „Mé stanoviště"
    - `qualifications` – pole kvalifikací (`{'pajeni_vlna','aoi'}`)
@@ -70,7 +71,9 @@ preview.html                – HTML náhled UI v3 (13 obrazovek)
 | `customers` | Katalog zákazníků (autocomplete) |
 | `products` | Katalog produktů vázaných na zákazníka (kód, revize, program vlny) |
 | `product_documents` | Knihovna dokumentů produktu – při opakované zakázce se zkopíruje |
-| `order_stations` | Stav na každém ze 12 stanovišť + počty OK/oprava/zmetek |
+| `order_stations` | Stav na každém ze 13 stanovišť + počty OK/oprava/zmetek/přijato |
+| `production_events` | Append-only výrobní historie: AOI, osazení, pájení, opravy, testy, předání |
+| `defect_types` / `production_event_defects` | Číselník závad a vazba závad na výrobní záznamy |
 | `documents` | BOM, výkresy, průvodní listy zakázky |
 | `notes` | Poznámky – k zakázce nebo produktu, foto/hlas |
 | `checklist_templates` / `checklist_runs` | Checklisty na stanovištích |
@@ -78,7 +81,7 @@ preview.html                – HTML náhled UI v3 (13 obrazovek)
 | `notifications` | Push/in-app notifikace |
 | `bom_checks` | Ověření materiálu ve skladu |
 | `profiles` | Uživatelé (role, PIN, kvalifikace, push token) |
-| `stations`, `machines` | Číselníky (12 stanovišť, 6 automatů) |
+| `stations`, `machines` | Číselníky (13 stanovišť včetně Testování, 6 automatů) |
 
 ## 6. Stavy a typy
 

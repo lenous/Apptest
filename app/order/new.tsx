@@ -8,17 +8,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import {
-  MACHINES, PRIORITY_CONFIG, PRODUCTION_TYPE_CONFIG, generateOrderNumber,
+  MACHINES, PRIORITY_CONFIG, PRODUCTION_TYPE_CONFIG, TEST_FLOW_CONFIG, generateOrderNumber,
 } from '@/constants/stations';
 import {
   searchCustomers, getOrCreateCustomer,
   searchProducts, getOrCreateProduct,
   listProductDocuments, copyProductDocsToOrder,
 } from '@/lib/catalog';
-import type { Priority, ProductionType, Customer, Product } from '@/lib/types';
+import type { Priority, ProductionType, Customer, Product, TestFlow } from '@/lib/types';
 
 const PRIORITIES: Priority[] = ['low', 'normal', 'high', 'urgent'];
 const PRODUCTION_TYPES: ProductionType[] = ['new', 'repeat', 'revision'];
+const TEST_FLOWS: TestFlow[] = ['none', 'output_control', 'separate_station'];
 
 export default function NewOrderScreen() {
   const { user } = useAuth();
@@ -51,6 +52,8 @@ export default function NewOrderScreen() {
   // Stroj + vlna
   const [machineId, setMachineId] = useState<string | null>(null);
   const [waveProgram, setWaveProgram] = useState('');
+  const [selectiveWaveProgram, setSelectiveWaveProgram] = useState('');
+  const [testFlow, setTestFlow] = useState<TestFlow>('output_control');
 
   const [saving, setSaving] = useState(false);
 
@@ -83,6 +86,8 @@ export default function NewOrderScreen() {
     if (!product) { setProductHasDocs(null); return; }
     listProductDocuments(product.id).then(d => setProductHasDocs(d.length)).catch(() => {});
     if (product.wave_program && !waveProgram) setWaveProgram(product.wave_program);
+    if (product.selective_wave_program && !selectiveWaveProgram) setSelectiveWaveProgram(product.selective_wave_program);
+    setTestFlow(product.test_flow ?? 'output_control');
   }, [product]);
 
   function parseDate(str: string): string | null | 'invalid' {
@@ -131,6 +136,8 @@ export default function NewOrderScreen() {
         name: name.trim() || productQuery,
         revision: productRevision,
         waveProgram,
+        selectiveWaveProgram,
+        testFlow,
       });
       // 3) zakázka
       const { data: orderRow, error } = await supabase.from('orders').insert({
@@ -146,6 +153,8 @@ export default function NewOrderScreen() {
         due_date: parsedDue,
         machine_id: machineId,
         wave_program: waveProgram.trim() || prod.wave_program || null,
+        selective_wave_program: selectiveWaveProgram.trim() || prod.selective_wave_program || null,
+        test_flow: testFlow,
         created_by: user?.id ?? null,
       }).select('id').single();
       if (error) throw error;
@@ -399,6 +408,38 @@ export default function NewOrderScreen() {
         </Field>
       </Section>
 
+      <Section title="Selektivní vlna">
+        <Field label="Číslo programu (volitelné)">
+          <TextInput
+            style={styles.input}
+            placeholder="např. S-208"
+            placeholderTextColor="#9ca3af"
+            value={selectiveWaveProgram}
+            onChangeText={setSelectiveWaveProgram}
+            autoCapitalize="characters"
+          />
+        </Field>
+      </Section>
+
+      <Section title="Testování">
+        <View style={styles.chipRow}>
+          {TEST_FLOWS.map((flow) => {
+            const cfg = TEST_FLOW_CONFIG[flow];
+            const sel = testFlow === flow;
+            return (
+              <TouchableOpacity
+                key={flow}
+                style={[styles.chip, sel && styles.chipSelected]}
+                onPress={() => setTestFlow(flow)}
+              >
+                <Text style={[styles.chipText, sel && styles.chipTextSelected]}>{cfg.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <Text style={styles.helperText}>{TEST_FLOW_CONFIG[testFlow].description}</Text>
+      </Section>
+
       <Section title="Poznámky">
         <Field label="Popis / interní poznámky">
           <TextInput
@@ -474,6 +515,7 @@ const styles = StyleSheet.create({
   chipSelected: { backgroundColor: '#1a56db', borderColor: '#1a56db' },
   chipText: { fontSize: 13, color: '#374151', fontWeight: '500' },
   chipTextSelected: { color: '#fff' },
+  helperText: { fontSize: 12, color: '#6b7280', marginTop: 8 },
   iconBtn: {
     borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8,
     paddingHorizontal: 12, justifyContent: 'center', backgroundColor: '#fff',

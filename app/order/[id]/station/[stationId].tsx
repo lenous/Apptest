@@ -9,8 +9,12 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import {
   STATUS_CONFIG, STATIONS, MACHINES, SOLDERING_TYPES, NOTE_TYPE_CONFIG,
+  PRODUCTION_EVENT_CONFIG, PRODUCTION_RESULT_CONFIG, eventTypeForStation, defaultResultForEvent,
 } from '@/constants/stations';
-import type { OrderStation, Note, StationStatus } from '@/lib/types';
+import type {
+  OrderStation, Note, StationStatus, DefectType, ProductionEvent,
+  ProductionEventType, ProductionEventResult, TestFlow,
+} from '@/lib/types';
 
 type NoteType = Note['note_type'];
 
@@ -25,8 +29,12 @@ export default function StationDetailScreen() {
   const [os, setOs] = useState<OrderStation | null>(null);
   const [machineId, setMachineId] = useState<string | null>(null);
   const [waveProgram, setWaveProgram] = useState<string | null>(null);
+  const [selectiveWaveProgram, setSelectiveWaveProgram] = useState<string | null>(null);
+  const [testFlow, setTestFlow] = useState<TestFlow>('output_control');
   const [orderQty, setOrderQty] = useState<number>(0);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [defectTypes, setDefectTypes] = useState<DefectType[]>([]);
+  const [events, setEvents] = useState<ProductionEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -44,16 +52,33 @@ export default function StationDetailScreen() {
   const [qtyScrap, setQtyScrap] = useState('0');
   const [qtyReceived, setQtyReceived] = useState(0);
 
+  // Výrobní záznam
+  const initialEventType = eventTypeForStation(stationNum);
+  const [eventType, setEventType] = useState<ProductionEventType>(initialEventType);
+  const [eventResult, setEventResult] = useState<ProductionEventResult>(defaultResultForEvent(initialEventType));
+  const [eventQtyTotal, setEventQtyTotal] = useState('');
+  const [eventQtyOk, setEventQtyOk] = useState('');
+  const [eventQtyNok, setEventQtyNok] = useState('');
+  const [eventQtyRework, setEventQtyRework] = useState('');
+  const [eventQtyScrap, setEventQtyScrap] = useState('');
+  const [eventNote, setEventNote] = useState('');
+  const [eventMeasurement, setEventMeasurement] = useState('');
+  const [repairAction, setRepairAction] = useState('');
+  const [selectedDefects, setSelectedDefects] = useState<string[]>([]);
+  const [sourceEventId, setSourceEventId] = useState<string | null>(null);
+
   // Předat dál
   const [forwardModalVisible, setForwardModalVisible] = useState(false);
   const [forwardQty, setForwardQty] = useState('');
   const [nextStationId, setNextStationId] = useState<number | null>(null);
 
   const fetch = useCallback(async () => {
-    const [osRes, notesRes, orderRes] = await Promise.all([
+    const [osRes, notesRes, orderRes, defectsRes, eventsRes] = await Promise.all([
       supabase.from('order_stations').select('*').eq('order_id', orderId).eq('station_id', stationNum).single(),
       supabase.from('notes').select('*').eq('order_id', orderId).eq('station_id', stationNum).order('created_at', { ascending: false }),
-      supabase.from('orders').select('machine_id, wave_program, quantity').eq('id', orderId).single(),
+      supabase.from('orders').select('machine_id, wave_program, selective_wave_program, test_flow, quantity').eq('id', orderId).single(),
+      supabase.from('defect_types').select('*').eq('active', true).order('label'),
+      supabase.from('production_events').select('*').eq('order_id', orderId).order('created_at', { ascending: false }).limit(30),
     ]);
     if (osRes.data) {
       setOs(osRes.data);
@@ -67,8 +92,12 @@ export default function StationDetailScreen() {
     if (orderRes.data) {
       setMachineId(orderRes.data.machine_id);
       setWaveProgram(orderRes.data.wave_program);
+      setSelectiveWaveProgram(orderRes.data.selective_wave_program);
+      setTestFlow(orderRes.data.test_flow ?? 'output_control');
       setOrderQty(orderRes.data.quantity ?? 0);
     }
+    if (defectsRes.data) setDefectTypes(defectsRes.data as DefectType[]);
+    if (eventsRes.data) setEvents(eventsRes.data as ProductionEvent[]);
     setLoading(false);
   }, [orderId, stationNum]);
 
@@ -76,6 +105,15 @@ export default function StationDetailScreen() {
     navigation.setOptions({ title: stationInfo?.name ?? 'Stanoviště' });
     fetch();
   }, [fetch, stationInfo, navigation]);
+
+  useEffect(() => {
+    const nextEventType =
+      stationNum === 11 && testFlow !== 'output_control'
+        ? 'general'
+        : eventTypeForStation(stationNum);
+    setEventType(nextEventType);
+    setEventResult(defaultResultForEvent(nextEventType));
+  }, [stationNum, testFlow]);
 
   /** Najde další aktivní (applicable) stanoviště v pořadí po aktuálním */
   async function findNextStation(): Promise<number | null> {
@@ -191,11 +229,113 @@ export default function StationDetailScreen() {
       payload: { qty, to_station: nextStationId },
     });
 
+    await supabase.rpc('record_production_event', {
+      p_order_id: orderId,
+      p_order_station_id: os?.id ?? null,
+      p_station_id: stationNum,
+      p_event_type: 'transfer',
+      p_result: 'completed',
+      p_qty_total: qty,
+      p_qty_ok: qty,
+      p_qty_nok: 0,
+      p_qty_rework: 0,
+      p_qty_scrap: 0,
+      p_soldering_type: null,
+      p_program_code: null,
+      p_repair_action: null,
+      p_measurement: {},
+      p_note: `Předáno na stanoviště ${nextStationId}`,
+      p_photo_paths: null,
+      p_source_event_id: null,
+      p_defect_type_ids: null,
+    });
+
     setSaving(false);
     fetch();
 
     const nextStName = STATIONS.find((s) => s.id === nextStationId)?.name ?? String(nextStationId);
     Alert.alert('Předáno', `${qty} ks předáno na stanoviště: ${nextStName}`);
+  }
+
+  function parseQty(value: string): number {
+    return parseInt(value, 10) || 0;
+  }
+
+  function toggleDefect(defectId: string) {
+    setSelectedDefects((current) =>
+      current.includes(defectId) ? current.filter((id) => id !== defectId) : [...current, defectId]
+    );
+  }
+
+  function parseMeasurement(): Record<string, string> {
+    const text = eventMeasurement.trim();
+    if (!text) return {};
+    return text.split('\n').reduce<Record<string, string>>((acc, line) => {
+      const [rawKey, ...rest] = line.split(':');
+      const key = rawKey?.trim();
+      const value = rest.join(':').trim();
+      if (key && value) acc[key] = value;
+      return acc;
+    }, {});
+  }
+
+  async function saveProductionEvent() {
+    if (!os) return;
+    const total = parseQty(eventQtyTotal);
+    const ok = parseQty(eventQtyOk);
+    const nok = parseQty(eventQtyNok);
+    const rework = parseQty(eventQtyRework);
+    const scrap = parseQty(eventQtyScrap);
+    if (total + ok + nok + rework + scrap === 0) {
+      Alert.alert('Chyba', 'Zadejte alespoň jedno množství.');
+      return;
+    }
+
+    const programCode = eventType === 'soldering'
+      ? solderingType === 'selektivni'
+        ? selectiveWaveProgram
+        : solderingType === 'vlna'
+          ? waveProgram
+          : null
+      : null;
+
+    setSaving(true);
+    const { error } = await supabase.rpc('record_production_event', {
+      p_order_id: orderId,
+      p_order_station_id: os.id,
+      p_station_id: stationNum,
+      p_event_type: eventType,
+      p_result: eventResult,
+      p_qty_total: total,
+      p_qty_ok: ok,
+      p_qty_nok: nok,
+      p_qty_rework: rework,
+      p_qty_scrap: scrap,
+      p_soldering_type: eventType === 'soldering' ? solderingType : null,
+      p_program_code: programCode,
+      p_repair_action: eventType === 'repair' ? repairAction.trim() || null : null,
+      p_measurement: parseMeasurement(),
+      p_note: eventNote.trim() || null,
+      p_photo_paths: null,
+      p_source_event_id: sourceEventId,
+      p_defect_type_ids: selectedDefects.length ? selectedDefects : null,
+    });
+    setSaving(false);
+    if (error) {
+      Alert.alert('Chyba', error.message);
+      return;
+    }
+    setEventQtyTotal('');
+    setEventQtyOk('');
+    setEventQtyNok('');
+    setEventQtyRework('');
+    setEventQtyScrap('');
+    setEventNote('');
+    setEventMeasurement('');
+    setRepairAction('');
+    setSelectedDefects([]);
+    setSourceEventId(null);
+    fetch();
   }
 
   async function addNote() {
@@ -222,6 +362,14 @@ export default function StationDetailScreen() {
   const machine = MACHINES.find(m => m.id === machineId);
   const NOTE_TYPES: NoteType[] = ['note', 'change_request', 'issue'];
   const qtyWip = qtyReceived - ((parseInt(qtyOk, 10) || 0) + (parseInt(qtyRework, 10) || 0) + (parseInt(qtyScrap, 10) || 0));
+  const eventCfg = PRODUCTION_EVENT_CONFIG[eventType];
+  const visibleDefects = defectTypes.filter((d) => !d.event_type || d.event_type === eventType || d.station_id === stationNum);
+  const sourceEvents = events.filter((e) => ['nok', 'fail', 'partial', 'retest'].includes(e.result) && e.event_type !== 'repair');
+  const resultOptions: ProductionEventResult[] = eventType === 'testing'
+    ? ['pass', 'fail', 'retest']
+    : eventType === 'transfer' || eventType === 'general'
+      ? ['completed']
+      : ['ok', 'nok', 'partial'];
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -277,8 +425,135 @@ export default function StationDetailScreen() {
               <Text style={styles.waveTxt}>Program vlny: <Text style={{ fontWeight: '700' }}>{waveProgram}</Text></Text>
             </View>
           )}
+          {solderingType === 'selektivni' && selectiveWaveProgram && (
+            <View style={styles.waveBox}>
+              <Ionicons name="code-working" size={16} color="#1d4ed8" />
+              <Text style={styles.waveTxt}>Program selektivní vlny: <Text style={{ fontWeight: '700' }}>{selectiveWaveProgram}</Text></Text>
+            </View>
+          )}
         </View>
       )}
+
+      {/* Výrobní záznam */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Záznam výroby</Text>
+        <View style={styles.eventCard}>
+          <View style={styles.eventHeader}>
+            <View style={[styles.eventIcon, { backgroundColor: eventCfg.color + '20' }]}>
+              <Ionicons name={eventCfg.icon as any} size={18} color={eventCfg.color} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.eventTitle}>{eventCfg.label}</Text>
+              {eventType === 'testing' && (
+                <Text style={styles.eventHint}>
+                  {testFlow === 'separate_station' ? 'Samostatné testovací stanoviště' : 'Test ve výstupní kontrole'}
+                </Text>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.chipRow}>
+            {resultOptions.map((result) => {
+              const rcfg = PRODUCTION_RESULT_CONFIG[result];
+              const active = eventResult === result;
+              return (
+                <TouchableOpacity
+                  key={result}
+                  style={[styles.chip, active && { backgroundColor: rcfg.color, borderColor: rcfg.color }]}
+                  onPress={() => setEventResult(result)}
+                >
+                  <Text style={[styles.chipText, active && { color: '#fff' }]}>{rcfg.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <View style={styles.eventCountGrid}>
+            <SmallQtyField label="Celkem" value={eventQtyTotal} onChange={setEventQtyTotal} />
+            <SmallQtyField label={eventType === 'testing' ? 'Pass' : 'OK'} value={eventQtyOk} onChange={setEventQtyOk} />
+            <SmallQtyField label={eventType === 'testing' ? 'Fail' : 'NOK'} value={eventQtyNok} onChange={setEventQtyNok} />
+            <SmallQtyField label="Oprava" value={eventQtyRework} onChange={setEventQtyRework} />
+            <SmallQtyField label="Zmetek" value={eventQtyScrap} onChange={setEventQtyScrap} />
+          </View>
+
+          {eventType === 'repair' && sourceEvents.length > 0 && (
+            <View style={{ marginTop: 10 }}>
+              <Text style={styles.eventLabel}>Vazba na závadu</Text>
+              <View style={styles.chipRow}>
+                {sourceEvents.slice(0, 5).map((event) => {
+                  const active = sourceEventId === event.id;
+                  return (
+                    <TouchableOpacity
+                      key={event.id}
+                      style={[styles.chip, active && styles.chipSelected]}
+                      onPress={() => setSourceEventId(active ? null : event.id)}
+                    >
+                      <Text style={[styles.chipText, active && styles.chipTextSelected]}>
+                        {PRODUCTION_EVENT_CONFIG[event.event_type].label} · {new Date(event.created_at).toLocaleDateString('cs-CZ')}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+
+          {eventType === 'repair' && (
+            <TextInput
+              style={styles.eventInput}
+              placeholder="Popis opravy..."
+              placeholderTextColor="#9ca3af"
+              value={repairAction}
+              onChangeText={setRepairAction}
+            />
+          )}
+
+          {visibleDefects.length > 0 && (
+            <View style={{ marginTop: 10 }}>
+              <Text style={styles.eventLabel}>Závady</Text>
+              <View style={styles.chipRow}>
+                {visibleDefects.map((defect) => {
+                  const active = selectedDefects.includes(defect.id);
+                  return (
+                    <TouchableOpacity
+                      key={defect.id}
+                      style={[styles.chip, active && styles.chipSelected]}
+                      onPress={() => toggleDefect(defect.id)}
+                    >
+                      <Text style={[styles.chipText, active && styles.chipTextSelected]}>{defect.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+
+          {eventType === 'testing' && (
+            <TextInput
+              style={[styles.eventInput, styles.eventTextArea]}
+              placeholder={'Měřené hodnoty, jedna na řádek: napětí: 5.01 V'}
+              placeholderTextColor="#9ca3af"
+              multiline
+              value={eventMeasurement}
+              onChangeText={setEventMeasurement}
+            />
+          )}
+
+          <TextInput
+            style={[styles.eventInput, styles.eventTextArea]}
+            placeholder="Poznámka k záznamu..."
+            placeholderTextColor="#9ca3af"
+            multiline
+            value={eventNote}
+            onChangeText={setEventNote}
+          />
+
+          <TouchableOpacity style={styles.eventSubmit} onPress={saveProductionEvent} disabled={saving}>
+            <Ionicons name="save-outline" size={18} color="#fff" />
+            <Text style={styles.eventSubmitText}>{saving ? 'Ukládám…' : 'Uložit záznam výroby'}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       {/* Počty kusů */}
       <View style={styles.section}>
@@ -485,6 +760,24 @@ function CountField({ label, value, onChange, color }: {
   );
 }
 
+function SmallQtyField({ label, value, onChange }: {
+  label: string; value: string; onChange: (v: string) => void;
+}) {
+  return (
+    <View style={styles.eventQtyField}>
+      <Text style={styles.eventQtyLabel}>{label}</Text>
+      <TextInput
+        style={styles.eventQtyInput}
+        keyboardType="number-pad"
+        value={value}
+        onChangeText={(t) => onChange(t.replace(/[^0-9]/g, ''))}
+        placeholder="0"
+        placeholderTextColor="#9ca3af"
+      />
+    </View>
+  );
+}
+
 function ActionBtn({ icon, label, color, onPress, disabled }: {
   icon: string; label: string; color: string;
   onPress: () => void; disabled: boolean;
@@ -586,6 +879,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center', gap: 6,
   },
   forwardBtnTxt: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  eventCard: {
+    backgroundColor: '#fff', borderRadius: 12, padding: 12,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06, shadowRadius: 3, elevation: 1,
+  },
+  eventHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  eventIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  eventTitle: { fontSize: 15, fontWeight: '700', color: '#111827' },
+  eventHint: { fontSize: 11, color: '#6b7280', marginTop: 1 },
+  eventLabel: { fontSize: 11, fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', marginBottom: 6 },
+  eventCountGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  eventQtyField: { width: '31%', minWidth: 88 },
+  eventQtyLabel: { fontSize: 11, color: '#6b7280', fontWeight: '600', marginBottom: 4 },
+  eventQtyInput: {
+    borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8,
+    backgroundColor: '#f9fafb', padding: 9, fontSize: 15,
+    color: '#111827', textAlign: 'center', fontWeight: '700',
+  },
+  eventInput: {
+    borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8,
+    padding: 10, fontSize: 14, color: '#111827',
+    backgroundColor: '#f9fafb', marginTop: 10,
+  },
+  eventTextArea: { minHeight: 70, textAlignVertical: 'top' },
+  eventSubmit: {
+    backgroundColor: '#1a56db', borderRadius: 9, padding: 12,
+    alignItems: 'center', justifyContent: 'center', flexDirection: 'row',
+    gap: 8, marginTop: 10,
+  },
+  eventSubmitText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   // Modal
   modalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',

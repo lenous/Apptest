@@ -28,6 +28,7 @@ const ALL_QUALIFICATIONS = [
   'sklad', 'automat', 'aoi', 'rtg', 'oprava_aoi',
   'osazovani', 'pajeni_vlna', 'pajeni_selektivni', 'pajeni_rucni',
   'oprava_pajeni', 'programovani', 'lakovani', 'vystupni_kontrola', 'baleni',
+  'testovani',
 ];
 
 const QUALIFICATION_LABELS: Record<string, string> = {
@@ -45,6 +46,7 @@ const QUALIFICATION_LABELS: Record<string, string> = {
   lakovani: 'Lakování',
   vystupni_kontrola: 'Výstupní kont.',
   baleni: 'Balení',
+  testovani: 'Testování',
 };
 
 type Tab = 'users';

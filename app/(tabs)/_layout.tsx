@@ -61,7 +61,7 @@ export default function TabsLayout() {
         name="products"
         options={{
           title: 'Produkty',
-          href: tabHref(['tpv'], role),
+          href: tabHref(['tpv', 'admin'], role),
           tabBarIcon: ({ color, size }) => <Ionicons name="cube-outline" size={size} color={color} />,
         }}
       />

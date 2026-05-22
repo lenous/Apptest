@@ -11,6 +11,9 @@ export type BomStatus = 'ok' | 'partial' | 'missing' | 'unknown';
 export type NotifType = 'issue' | 'deadline' | 'new_order' | 'mention' | 'change';
 export type DeadlineState = 'none' | 'overdue' | 'soon' | 'ok';
 export type NotifPriority = 'low' | 'normal' | 'high';
+export type TestFlow = 'none' | 'output_control' | 'separate_station';
+export type ProductionEventType = 'aoi' | 'manual_assembly' | 'soldering' | 'repair' | 'testing' | 'transfer' | 'general';
+export type ProductionEventResult = 'ok' | 'nok' | 'partial' | 'pass' | 'fail' | 'retest' | 'completed';
 
 export type Database = {
   public: {
@@ -60,6 +63,8 @@ export type Database = {
           name: string;
           revision: string | null;
           wave_program: string | null;
+          selective_wave_program: string | null;
+          test_flow: TestFlow;
           applicable_stations: number[];
           note: string | null;
           created_at: string;
@@ -98,6 +103,8 @@ export type Database = {
           due_date: string | null;
           machine_id: string | null;
           wave_program: string | null;
+          selective_wave_program: string | null;
+          test_flow: TestFlow;
           qr_code: string | null;
           hidden_at: string | null;
           created_by: string | null;
@@ -227,6 +234,56 @@ export type Database = {
         Insert: Omit<Database['public']['Tables']['bom_checks']['Row'], 'id'> & { id?: string };
         Update: Partial<Database['public']['Tables']['bom_checks']['Insert']>;
       };
+      defect_types: {
+        Row: {
+          id: string;
+          code: string;
+          label: string;
+          station_id: number | null;
+          event_type: ProductionEventType | null;
+          active: boolean;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['defect_types']['Row'], 'id' | 'created_at'> & { id?: string };
+        Update: Partial<Database['public']['Tables']['defect_types']['Insert']>;
+      };
+      production_events: {
+        Row: {
+          id: string;
+          order_id: string;
+          product_id: string | null;
+          order_station_id: string | null;
+          station_id: number | null;
+          event_type: ProductionEventType;
+          result: ProductionEventResult;
+          qty_total: number;
+          qty_ok: number;
+          qty_nok: number;
+          qty_rework: number;
+          qty_scrap: number;
+          soldering_type: SolderingType | null;
+          program_code: string | null;
+          repair_action: string | null;
+          measurement: Json;
+          note: string | null;
+          photo_paths: string[] | null;
+          source_event_id: string | null;
+          actor_id: string | null;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['production_events']['Row'], 'id' | 'created_at'> & { id?: string };
+        Update: Partial<Database['public']['Tables']['production_events']['Insert']>;
+      };
+      production_event_defects: {
+        Row: {
+          event_id: string;
+          defect_type_id: string;
+          qty: number;
+          note: string | null;
+        };
+        Insert: Database['public']['Tables']['production_event_defects']['Row'];
+        Update: Partial<Database['public']['Tables']['production_event_defects']['Insert']>;
+      };
     };
     Views: {
       orders_dashboard: {
@@ -258,6 +315,9 @@ export type Machine = Database['public']['Tables']['machines']['Row'];
 export type ChecklistTemplate = Database['public']['Tables']['checklist_templates']['Row'];
 export type ChecklistRun = Database['public']['Tables']['checklist_runs']['Row'];
 export type AuditLog = Database['public']['Tables']['audit_log']['Row'];
+export type DefectType = Database['public']['Tables']['defect_types']['Row'];
+export type ProductionEvent = Database['public']['Tables']['production_events']['Row'];
+export type ProductionEventDefect = Database['public']['Tables']['production_event_defects']['Row'];
 export type Notification = Database['public']['Tables']['notifications']['Row'];
 export type BomCheck = Database['public']['Tables']['bom_checks']['Row'];
 export type OrderDashboard = Database['public']['Views']['orders_dashboard']['Row'];

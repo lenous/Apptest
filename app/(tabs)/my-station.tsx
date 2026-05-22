@@ -28,6 +28,7 @@ const QUAL_TO_STATION: Record<string, number[]> = {
   lakovani: [10],
   vystupni_kontrola: [11],
   baleni: [12],
+  testovani: [13],
 };
 
 function getQualifiedStationIds(qualifications: string[] | null | undefined): number[] {

@@ -10,10 +10,11 @@ import { useAuth } from '@/context/AuthContext';
 import {
   STATUS_CONFIG, PRIORITY_CONFIG, MACHINES,
   SOLDERING_TYPES, DOC_TYPE_CONFIG, NOTE_TYPE_CONFIG,
+  PRODUCTION_EVENT_CONFIG, PRODUCTION_RESULT_CONFIG,
 } from '@/constants/stations';
-import type { OrderWithStations, Document, Note } from '@/lib/types';
+import type { OrderWithStations, Document, Note, ProductionEvent, AuditLog, ProductionEventType } from '@/lib/types';
 
-type Tab = 'stations' | 'documents' | 'notes';
+type Tab = 'stations' | 'tracking' | 'history' | 'documents' | 'notes';
 
 export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -24,6 +25,8 @@ export default function OrderDetailScreen() {
   const [order, setOrder] = useState<OrderWithStations | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [events, setEvents] = useState<ProductionEvent[]>([]);
+  const [audit, setAudit] = useState<AuditLog[]>([]);
   const [tab, setTab] = useState<Tab>('stations');
   const [loading, setLoading] = useState(true);
 
@@ -58,11 +61,32 @@ export default function OrderDetailScreen() {
     if (data) setNotes(data);
   }, [id]);
 
+  const fetchEvents = useCallback(async () => {
+    const { data } = await supabase
+      .from('production_events')
+      .select('*')
+      .eq('order_id', id)
+      .order('created_at', { ascending: false });
+    if (data) setEvents(data as ProductionEvent[]);
+  }, [id]);
+
+  const fetchAudit = useCallback(async () => {
+    const { data } = await supabase
+      .from('audit_log')
+      .select('*')
+      .eq('order_id', id)
+      .order('created_at', { ascending: false })
+      .limit(80);
+    if (data) setAudit(data as AuditLog[]);
+  }, [id]);
+
   useEffect(() => {
     fetchOrder();
     fetchDocuments();
     fetchNotes();
-  }, [fetchOrder, fetchDocuments, fetchNotes]);
+    fetchEvents();
+    fetchAudit();
+  }, [fetchOrder, fetchDocuments, fetchNotes, fetchEvents, fetchAudit]);
 
   if (loading || !order) {
     return <View style={styles.centered}><ActivityIndicator size="large" color="#1a56db" /></View>;
@@ -71,6 +95,24 @@ export default function OrderDetailScreen() {
   const prio = PRIORITY_CONFIG[order.priority];
   const machine = MACHINES.find(m => m.id === order.machine_id);
   const sortedStations = [...order.order_stations].sort((a, b) => a.station_id - b.station_id);
+  const trackingSummary = events.reduce<Record<ProductionEventType, {
+    total: number; ok: number; nok: number; rework: number; scrap: number; count: number;
+  }>>((acc, event) => {
+    const current = acc[event.event_type] ?? { total: 0, ok: 0, nok: 0, rework: 0, scrap: 0, count: 0 };
+    current.total += event.qty_total ?? 0;
+    current.ok += event.qty_ok ?? 0;
+    current.nok += event.qty_nok ?? 0;
+    current.rework += event.qty_rework ?? 0;
+    current.scrap += event.qty_scrap ?? 0;
+    current.count += 1;
+    acc[event.event_type] = current;
+    return acc;
+  }, {} as Record<ProductionEventType, { total: number; ok: number; nok: number; rework: number; scrap: number; count: number }>);
+  const timeline = [
+    ...events.map((event) => ({ kind: 'event' as const, at: event.created_at, event })),
+    ...notes.map((note) => ({ kind: 'note' as const, at: note.created_at, note })),
+    ...audit.map((entry) => ({ kind: 'audit' as const, at: entry.created_at, entry })),
+  ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 
   return (
     <View style={styles.container}>
@@ -100,10 +142,18 @@ export default function OrderDetailScreen() {
       </View>
 
       <View style={styles.tabs}>
-        {(['stations', 'documents', 'notes'] as Tab[]).map(t => (
+        {(['stations', 'tracking', 'history', 'documents', 'notes'] as Tab[]).map(t => (
           <TouchableOpacity key={t} style={[styles.tab, tab === t && styles.tabActive]} onPress={() => setTab(t)}>
             <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
-              {t === 'stations' ? 'Stanoviště' : t === 'documents' ? `Dokumenty (${documents.length})` : `Poznámky (${notes.length})`}
+              {t === 'stations'
+                ? 'Stanoviště'
+                : t === 'tracking'
+                  ? 'Sledování'
+                  : t === 'history'
+                    ? 'Historie'
+                    : t === 'documents'
+                      ? `Dokumenty (${documents.length})`
+                      : `Poznámky (${notes.length})`}
             </Text>
           </TouchableOpacity>
         ))}
@@ -230,6 +280,109 @@ export default function OrderDetailScreen() {
           </View>
         )}
 
+        {tab === 'tracking' && (
+          <View>
+            {events.length === 0 ? (
+              <View style={styles.empty}>
+                <Ionicons name="analytics-outline" size={40} color="#d1d5db" />
+                <Text style={styles.emptyText}>Žádné výrobní záznamy</Text>
+              </View>
+            ) : (
+              (Object.keys(trackingSummary) as ProductionEventType[]).map((type) => {
+                const cfg = PRODUCTION_EVENT_CONFIG[type];
+                const row = trackingSummary[type];
+                return (
+                  <View key={type} style={styles.trackCard}>
+                    <View style={styles.trackHeader}>
+                      <View style={[styles.trackIcon, { backgroundColor: cfg.color + '20' }]}>
+                        <Ionicons name={cfg.icon as any} size={18} color={cfg.color} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.trackTitle}>{cfg.label}</Text>
+                        <Text style={styles.trackMeta}>{row.count} záznamů</Text>
+                      </View>
+                    </View>
+                    <View style={styles.trackStats}>
+                      <TrackStat label="Celkem" value={row.total} color="#6b7280" />
+                      <TrackStat label="OK/Pass" value={row.ok} color="#15803d" />
+                      <TrackStat label="NOK/Fail" value={row.nok} color="#b91c1c" />
+                      <TrackStat label="Oprava" value={row.rework} color="#d97706" />
+                      <TrackStat label="Zmetek" value={row.scrap} color="#991b1b" />
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </View>
+        )}
+
+        {tab === 'history' && (
+          <View>
+            {timeline.length === 0 ? (
+              <View style={styles.empty}>
+                <Ionicons name="time-outline" size={40} color="#d1d5db" />
+                <Text style={styles.emptyText}>Historie je prázdná</Text>
+              </View>
+            ) : (
+              timeline.map((item, idx) => {
+                if (item.kind === 'event') {
+                  const event = item.event;
+                  const cfg = PRODUCTION_EVENT_CONFIG[event.event_type];
+                  const rcfg = PRODUCTION_RESULT_CONFIG[event.result];
+                  return (
+                    <View key={`event-${event.id}`} style={styles.timelineItem}>
+                      <View style={[styles.timelineIcon, { backgroundColor: cfg.color + '20' }]}>
+                        <Ionicons name={cfg.icon as any} size={16} color={cfg.color} />
+                      </View>
+                      <View style={styles.timelineBody}>
+                        <View style={styles.timelineTop}>
+                          <Text style={styles.timelineTitle}>{cfg.label}</Text>
+                          <View style={[styles.resultBadge, { backgroundColor: rcfg.bg }]}>
+                            <Text style={[styles.resultTxt, { color: rcfg.color }]}>{rcfg.label}</Text>
+                          </View>
+                        </View>
+                        <Text style={styles.timelineText}>
+                          Celkem {event.qty_total} · OK {event.qty_ok} · NOK {event.qty_nok} · Oprava {event.qty_rework} · Zmetek {event.qty_scrap}
+                        </Text>
+                        {event.note ? <Text style={styles.timelineText}>{event.note}</Text> : null}
+                        <Text style={styles.timelineTime}>{new Date(event.created_at).toLocaleString('cs-CZ')}</Text>
+                      </View>
+                    </View>
+                  );
+                }
+                if (item.kind === 'note') {
+                  const note = item.note;
+                  const cfg = NOTE_TYPE_CONFIG[note.note_type];
+                  return (
+                    <View key={`note-${note.id}`} style={styles.timelineItem}>
+                      <View style={[styles.timelineIcon, { backgroundColor: cfg.color + '20' }]}>
+                        <Ionicons name="chatbox-outline" size={16} color={cfg.color} />
+                      </View>
+                      <View style={styles.timelineBody}>
+                        <Text style={styles.timelineTitle}>{cfg.label}</Text>
+                        <Text style={styles.timelineText}>{note.content}</Text>
+                        <Text style={styles.timelineTime}>{new Date(note.created_at).toLocaleString('cs-CZ')}</Text>
+                      </View>
+                    </View>
+                  );
+                }
+                const entry = item.entry;
+                return (
+                  <View key={`audit-${entry.id}-${idx}`} style={styles.timelineItem}>
+                    <View style={[styles.timelineIcon, { backgroundColor: '#f3f4f6' }]}>
+                      <Ionicons name="shield-checkmark-outline" size={16} color="#6b7280" />
+                    </View>
+                    <View style={styles.timelineBody}>
+                      <Text style={styles.timelineTitle}>{entry.action}</Text>
+                      <Text style={styles.timelineTime}>{new Date(entry.created_at).toLocaleString('cs-CZ')}</Text>
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </View>
+        )}
+
         {tab === 'notes' && (
           <View>
             <TouchableOpacity style={styles.uploadBtn} onPress={() => router.push(`/order/${id}/note` as any)}>
@@ -266,6 +419,15 @@ export default function OrderDetailScreen() {
           </View>
         )}
       </ScrollView>
+    </View>
+  );
+}
+
+function TrackStat({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <View style={styles.trackStat}>
+      <Text style={[styles.trackStatValue, { color }]}>{value}</Text>
+      <Text style={styles.trackStatLabel}>{label}</Text>
     </View>
   );
 }
@@ -335,4 +497,26 @@ const styles = StyleSheet.create({
   },
   empty: { alignItems: 'center', paddingTop: 40 },
   emptyText: { fontSize: 14, color: '#9ca3af', marginTop: 10 },
+  trackCard: {
+    backgroundColor: '#fff', borderRadius: 10, padding: 12, marginBottom: 10,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05, shadowRadius: 2, elevation: 1,
+  },
+  trackHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  trackIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  trackTitle: { fontSize: 14, fontWeight: '700', color: '#111827' },
+  trackMeta: { fontSize: 11, color: '#6b7280', marginTop: 1 },
+  trackStats: { flexDirection: 'row', gap: 6 },
+  trackStat: { flex: 1, backgroundColor: '#f9fafb', borderRadius: 8, padding: 8, alignItems: 'center' },
+  trackStatValue: { fontSize: 16, fontWeight: '800' },
+  trackStatLabel: { fontSize: 9, color: '#6b7280', textAlign: 'center', marginTop: 2 },
+  timelineItem: { flexDirection: 'row', gap: 10, marginBottom: 10 },
+  timelineIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  timelineBody: { flex: 1, backgroundColor: '#fff', borderRadius: 10, padding: 12 },
+  timelineTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  timelineTitle: { fontSize: 13, fontWeight: '700', color: '#111827' },
+  timelineText: { fontSize: 12, color: '#374151', marginTop: 4, lineHeight: 17 },
+  timelineTime: { fontSize: 11, color: '#9ca3af', marginTop: 6 },
+  resultBadge: { borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
+  resultTxt: { fontSize: 10, fontWeight: '700' },
 });
