@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "VyrobaIS v6",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "v6", "-l", "3456", "--no-clipboard"],
+      "port": 3456
+    }
+  ]
+}
